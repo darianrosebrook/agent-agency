@@ -247,7 +247,7 @@ impl EnvironmentManager {
         config
             .get("server.port")
             .and_then(|v| v.as_u64())
-            .unwrap_or(8080) as u16
+            .unwrap_or(8889) as u16
     }
 
     /// Get environment-specific JWT secret
@@ -427,7 +427,7 @@ pub mod presets {
         // Server
         config.insert(
             "server.port".to_string(),
-            serde_json::Value::Number(8080.into()),
+            serde_json::Value::Number(8889.into()),
         );
         config.insert(
             "server.host".to_string(),
@@ -478,7 +478,7 @@ pub mod presets {
         // Server
         config.insert(
             "server.port".to_string(),
-            serde_json::Value::Number(8080.into()),
+            serde_json::Value::Number(8889.into()),
         );
         config.insert(
             "server.host".to_string(),

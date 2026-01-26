@@ -262,6 +262,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         Ok(models::ExecutionPlan {
             id: plan.id,
             session_id,
+            workspace_id: None,
             working_spec_id,
             title: plan.title,
             overview: Some(plan.overview),
@@ -308,6 +309,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             models::ExecutionPlan {
                 id,
                 session_id,
+                workspace_id: r.try_get::<Option<String>, _>("workspace_id").ok().flatten(),
                 working_spec_id,
                 title: r.get("title"),
                 overview: r.try_get::<Option<String>, _>("overview").ok().flatten(),
@@ -376,6 +378,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 models::ExecutionPlan {
                     id,
                     session_id,
+                    workspace_id: r.try_get::<Option<String>, _>("workspace_id").ok().flatten(),
                     working_spec_id,
                     title: r.get("title"),
                     overview: r.try_get::<Option<String>, _>("overview").ok().flatten(),
@@ -1114,7 +1117,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             .get("endpoint")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
-            .unwrap_or_else(|| "http://localhost:8080".to_string());
+            .unwrap_or_else(|| "http://localhost:8889".to_string());
         let weight = judge
             .configuration
             .get("weight")

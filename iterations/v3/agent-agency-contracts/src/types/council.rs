@@ -8,6 +8,41 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// Review priority levels for constitutional council reviews
+///
+/// This enum is shared between agent-constitutional-council and agent-orchestration
+/// to avoid circular dependencies. Both crates should import from here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub enum ReviewPriority {
+    /// Low priority - can be deferred
+    Low,
+    /// Normal priority - standard review timeline
+    Normal,
+    /// High priority - expedited review
+    High,
+    /// Critical priority - immediate review required
+    Critical,
+}
+
+impl Default for ReviewPriority {
+    fn default() -> Self {
+        Self::Normal
+    }
+}
+
+impl From<crate::types::planning::TaskPriority> for ReviewPriority {
+    fn from(priority: crate::types::planning::TaskPriority) -> Self {
+        match priority {
+            crate::types::planning::TaskPriority::Low => ReviewPriority::Low,
+            crate::types::planning::TaskPriority::Normal => ReviewPriority::Normal,
+            crate::types::planning::TaskPriority::Medium => ReviewPriority::Normal,
+            crate::types::planning::TaskPriority::High => ReviewPriority::High,
+            crate::types::planning::TaskPriority::Urgent => ReviewPriority::High,
+            crate::types::planning::TaskPriority::Critical => ReviewPriority::Critical,
+        }
+    }
+}
+
 /// Council verdict enumeration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum CouncilVerdict {

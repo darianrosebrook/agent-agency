@@ -166,6 +166,51 @@ impl DataInfrastructureFileOperationsService {
     pub fn with_config(default_repo_path: PathBuf) -> Self {
         Self::new(default_repo_path)
     }
+
+    /// Static conversion of system-common-interfaces Changeset to data-infrastructure ChangeSet
+    /// This is used for validation without needing a workspace
+    fn convert_changeset_static(changeset: &Changeset) -> std::result::Result<ChangeSet, FileOpsError> {
+        let patches: Vec<DataInfraPatch> = changeset
+            .patches
+            .iter()
+            .map(|p| {
+                let hunks: Vec<DataInfraHunk> = p
+                    .hunks
+                    .iter()
+                    .map(|h| DataInfraHunk {
+                        old_start: h.old_start as u32,
+                        old_lines: h.old_lines as u32,
+                        new_start: h.new_start as u32,
+                        new_lines: h.new_lines as u32,
+                        lines: h.lines.clone(),
+                    })
+                    .collect();
+
+                Ok(DataInfraPatch {
+                    path: p.path.clone(),
+                    hunks,
+                    expected_prev_sha256: None,
+                })
+            })
+            .collect::<std::result::Result<Vec<_>, FileOpsError>>()?;
+
+        Ok(ChangeSet { patches })
+    }
+
+    /// Static conversion of system-common-interfaces AllowList to data-infrastructure AllowList
+    fn convert_allowlist_static(allowlist: &AllowList) -> DataInfraAllowList {
+        DataInfraAllowList {
+            globs: allowlist.allowed_patterns.clone(),
+        }
+    }
+
+    /// Static conversion of system-common-interfaces Budgets to data-infrastructure Budgets
+    fn convert_budgets_static(budgets: &Budgets) -> DataInfraBudgets {
+        DataInfraBudgets {
+            max_files: budgets.max_files.unwrap_or(100),
+            max_loc: budgets.max_lines.unwrap_or(10000),
+        }
+    }
 }
 
 #[async_trait]
@@ -176,20 +221,11 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
         allowlist: &AllowList,
         budgets: &Budgets,
     ) -> FileResult<()> {
-        // Convert types and use the existing validate_changeset function
-        let adapter = WorkspaceAdapter {
-            inner: Arc::new(
-                TempMirrorWorkspace::new(&self.default_repo_path, "validation")
-                    .await
-                    .map_err(|e| {
-                        FileOpsError::Validation(format!("Workspace creation failed: {}", e))
-                    })?,
-            ),
-        };
-
-        let data_changeset = adapter.convert_changeset(changeset)?;
-        let data_allowlist = adapter.convert_allowlist(allowlist);
-        let data_budgets = adapter.convert_budgets(budgets);
+        // Convert types directly without creating a workspace
+        // Validation is stateless - it only checks the changeset against allowlist and budgets
+        let data_changeset = Self::convert_changeset_static(changeset)?;
+        let data_allowlist = Self::convert_allowlist_static(allowlist);
+        let data_budgets = Self::convert_budgets_static(budgets);
 
         // Use the existing validate_changeset function from data-infrastructure
         crate::file_operations::validate_changeset(&data_changeset, &data_allowlist, &data_budgets)
@@ -201,41 +237,80 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
         task_id: &str,
         repo_path: &Path,
     ) -> FileResult<Box<dyn SystemWorkspace>> {
+        tracing::info!(
+            "[FileOpsService::create_workspace] Starting for task_id={}, repo_path={:?}",
+            task_id,
+            repo_path
+        );
+        
         // Check if workspace already exists in registry
         {
             let registry = self.workspace_registry.read().await;
             if let Some(existing) = registry.get(task_id) {
+                tracing::info!(
+                    "[FileOpsService::create_workspace] Workspace already in registry for task_id={}",
+                    task_id
+                );
                 // Workspace already exists - return adapter wrapping the existing workspace
                 return Ok(Box::new(WorkspaceAdapter::new(existing.clone())));
             }
         }
+        
+        tracing::debug!("[FileOpsService::create_workspace] Workspace not in registry, creating new one...");
 
         // Create underlying workspace
-        let inner_workspace: Arc<dyn DataInfraWorkspace> = if repo_path.join(".git").exists() {
+        // Use tokio::fs::try_exists to avoid blocking the async runtime
+        let git_path = repo_path.join(".git");
+        let is_git_repo = fs::try_exists(&git_path).await.unwrap_or(false);
+        
+        tracing::info!(
+            "[FileOpsService::create_workspace] .git check: path={:?}, exists={}",
+            git_path,
+            is_git_repo
+        );
+        
+        let inner_workspace: Arc<dyn DataInfraWorkspace> = if is_git_repo {
+            tracing::info!("[FileOpsService::create_workspace] Creating GitWorktreeWorkspace...");
             Arc::new(
                 GitWorktreeWorkspace::new(repo_path, task_id)
                     .await
                     .map_err(|e| {
+                        tracing::error!(
+                            "[FileOpsService::create_workspace] GitWorktreeWorkspace creation failed: {}",
+                            e
+                        );
                         FileOpsError::Path(format!("Git workspace creation failed: {}", e))
                     })?,
             )
         } else {
+            tracing::info!("[FileOpsService::create_workspace] Creating TempMirrorWorkspace...");
             Arc::new(
                 TempMirrorWorkspace::new(repo_path, task_id)
                     .await
                     .map_err(|e| {
+                        tracing::error!(
+                            "[FileOpsService::create_workspace] TempMirrorWorkspace creation failed: {}",
+                            e
+                        );
                         FileOpsError::Path(format!("Temp workspace creation failed: {}", e))
                     })?,
             )
         };
+        
+        tracing::info!("[FileOpsService::create_workspace] Workspace created successfully");
 
         // Register the workspace
         {
             let mut registry = self.workspace_registry.write().await;
             registry.insert(task_id.to_string(), inner_workspace.clone());
+            tracing::debug!(
+                "[FileOpsService::create_workspace] Workspace registered for task_id={}",
+                task_id
+            );
         }
 
         // Wrap in adapter and return
+        tracing::info!("[FileOpsService::create_workspace] Returning workspace adapter");
         Ok(Box::new(WorkspaceAdapter::new(inner_workspace)))
     }
 
@@ -550,7 +625,11 @@ impl WorkspaceFactory for DataInfrastructureWorkspaceFactory {
         task_id: &str,
         repo_path: &Path,
     ) -> FileResult<Box<dyn SystemWorkspace>> {
-        let inner: Arc<dyn DataInfraWorkspace> = if repo_path.join(".git").exists() {
+        // Use tokio::fs::try_exists to avoid blocking the async runtime
+        let git_path = repo_path.join(".git");
+        let is_git_repo = fs::try_exists(&git_path).await.unwrap_or(false);
+        
+        let inner: Arc<dyn DataInfraWorkspace> = if is_git_repo {
             Arc::new(
                 GitWorktreeWorkspace::new(repo_path, task_id)
                     .await

@@ -1,0 +1,321 @@
+{
+  "version": "1.0.0",
+  "description": "Validated test tasks for V3 Agentic Harness evaluation. Tasks are organized by complexity level with clear success criteria.",
+  "tasks": [
+    {
+      "id": "simple-hello-world",
+      "description": "Create a simple hello world function in Rust that returns the string 'Hello, World!' when called. The function should be named 'hello_world', take no parameters, and return a &'static str.",
+      "task_type": "code_generation",
+      "complexity": "simple",
+      "success_criteria": [
+        "Function named 'hello_world' exists and compiles without errors",
+        "Function returns exactly the string 'Hello, World!'",
+        "Function has proper Rust documentation comment",
+        "Code follows Rust naming conventions"
+      ],
+      "validation_script": "scripts/validation/validate_hello_world.sh",
+      "context_requirements": {
+        "files_required": [],
+        "dependencies": [],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 3,
+      "known_challenges": []
+    },
+    {
+      "id": "simple-fibonacci",
+      "description": "Create a recursive Rust function named 'fibonacci' that calculates the nth Fibonacci number. The function should take a u32 parameter 'n' and return a u64. For n=0 return 0, for n=1 return 1, for n>1 return fib(n-1) + fib(n-2).",
+      "task_type": "code_generation",
+      "complexity": "simple",
+      "success_criteria": [
+        "Function named 'fibonacci' exists and compiles without errors",
+        "Function returns correct values: fibonacci(0)=0, fibonacci(1)=1, fibonacci(10)=55",
+        "Function handles edge cases correctly (n=0, n=1)",
+        "Function has proper documentation"
+      ],
+      "validation_script": "scripts/validation/validate_fibonacci.sh",
+      "context_requirements": {
+        "files_required": [],
+        "dependencies": [],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 5,
+      "known_challenges": []
+    },
+    {
+      "id": "simple-unit-test",
+      "description": "Write unit tests for an existing 'add' function that takes two i32 parameters and returns their sum. Create at least 3 test cases: positive numbers, negative numbers, and zero. Use Rust's #[test] attribute.",
+      "task_type": "testing",
+      "complexity": "simple",
+      "success_criteria": [
+        "At least 3 test functions exist with #[test] attribute",
+        "Tests cover positive numbers, negative numbers, and zero cases",
+        "All tests pass when run with 'cargo test'",
+        "Tests have descriptive names following Rust conventions"
+      ],
+      "validation_script": "scripts/validation/validate_unit_tests.sh",
+      "context_requirements": {
+        "files_required": [],
+        "dependencies": [],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 5,
+      "known_challenges": []
+    },
+    {
+      "id": "simple-documentation",
+      "description": "Write comprehensive documentation for a simple 'calculate_area' function that calculates the area of a rectangle. Include function purpose, parameters (width: f64, height: f64), return value (f64), example usage, and panics section if applicable.",
+      "task_type": "documentation",
+      "complexity": "simple",
+      "success_criteria": [
+        "Documentation includes function purpose description",
+        "Parameters are documented with types and descriptions",
+        "Return value is documented",
+        "At least one code example is provided in the documentation",
+        "Documentation compiles with rustdoc without warnings"
+      ],
+      "validation_script": "scripts/validation/validate_docs.sh",
+      "context_requirements": {
+        "files_required": [],
+        "dependencies": [],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 5,
+      "known_challenges": []
+    },
+    {
+      "id": "medium-user-validator",
+      "description": "Implement a UserValidator struct in Rust that validates user registration data. The validator should check: email format using regex, password strength (minimum 8 characters, at least one uppercase, one lowercase, one number), and username length (3-20 characters, alphanumeric only). Return a Result<(), Vec<ValidationError>>.",
+      "task_type": "code_generation",
+      "complexity": "medium",
+      "success_criteria": [
+        "UserValidator struct exists with validate method",
+        "Email validation uses proper regex pattern",
+        "Password validation checks all strength requirements",
+        "Username validation enforces length and character rules",
+        "Returns descriptive validation errors",
+        "All validation logic has unit tests"
+      ],
+      "validation_script": "scripts/validation/validate_user_validator.sh",
+      "context_requirements": {
+        "files_required": [],
+        "dependencies": ["regex"],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 15,
+      "known_challenges": [
+        "Regex pattern for email validation",
+        "Combining multiple validation errors"
+      ]
+    },
+    {
+      "id": "medium-refactor-function",
+      "description": "Refactor the following function to reduce cyclomatic complexity from 12 to under 5. The function processes order items and applies discounts. Extract helper functions, use early returns, and implement the strategy pattern for discount calculations. Maintain identical behavior.",
+      "task_type": "refactoring",
+      "complexity": "medium",
+      "success_criteria": [
+        "Cyclomatic complexity reduced to under 5 per function",
+        "Original test suite still passes",
+        "Helper functions have single responsibility",
+        "Code is more readable and maintainable",
+        "No behavioral changes detected"
+      ],
+      "validation_script": "scripts/validation/validate_refactor.sh",
+      "context_requirements": {
+        "files_required": ["src/orders/pricing.rs"],
+        "dependencies": [],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 20,
+      "known_challenges": [
+        "Maintaining exact behavior during refactor",
+        "Identifying appropriate abstraction boundaries"
+      ]
+    },
+    {
+      "id": "medium-fix-memory-leak",
+      "description": "Fix the memory leak in the ConnectionPool implementation. The issue is that connections are added to the pool but never removed when the pool is dropped. Implement proper Drop trait and ensure all connections are cleanly closed. Add tests that verify no memory is leaked.",
+      "task_type": "bug_fix",
+      "complexity": "medium",
+      "success_criteria": [
+        "Drop trait implemented for ConnectionPool",
+        "All connections are closed when pool is dropped",
+        "Memory usage does not grow after repeated pool creation/destruction",
+        "Tests verify proper cleanup behavior",
+        "No runtime errors or panics"
+      ],
+      "validation_script": "scripts/validation/validate_memory_fix.sh",
+      "context_requirements": {
+        "files_required": ["src/db/connection_pool.rs"],
+        "dependencies": [],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 25,
+      "known_challenges": [
+        "Understanding ownership semantics",
+        "Testing memory behavior"
+      ]
+    },
+    {
+      "id": "medium-integration-test",
+      "description": "Write integration tests for the TaskService that test the complete task lifecycle: creation, status updates, and completion. Tests should use a test database, handle async operations properly, and clean up after themselves. Cover both success and error paths.",
+      "task_type": "testing",
+      "complexity": "medium",
+      "success_criteria": [
+        "Integration tests cover task creation, update, and completion",
+        "Tests use proper test database isolation",
+        "Async operations are properly awaited",
+        "Tests clean up created data after execution",
+        "Error cases are tested with appropriate assertions",
+        "Tests are properly documented"
+      ],
+      "validation_script": "scripts/validation/validate_integration_tests.sh",
+      "context_requirements": {
+        "files_required": ["src/services/task_service.rs"],
+        "dependencies": ["tokio", "sqlx"],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 30,
+      "known_challenges": [
+        "Database test isolation",
+        "Async test setup and teardown"
+      ]
+    },
+    {
+      "id": "complex-api-endpoint",
+      "description": "Implement a complete REST API endpoint for task management including: POST /tasks (create), GET /tasks/{id} (read), PUT /tasks/{id} (update), DELETE /tasks/{id} (delete). Include proper error handling, input validation, authentication middleware, and audit logging. Use Axum framework conventions.",
+      "task_type": "code_generation",
+      "complexity": "complex",
+      "success_criteria": [
+        "All CRUD endpoints implemented and working",
+        "Input validation with descriptive error messages",
+        "Authentication middleware properly applied",
+        "Audit logging captures all operations",
+        "Proper HTTP status codes returned",
+        "API documentation generated",
+        "Integration tests cover all endpoints"
+      ],
+      "validation_script": "scripts/validation/validate_api_endpoints.sh",
+      "context_requirements": {
+        "files_required": ["src/api/mod.rs", "src/services/task_service.rs"],
+        "dependencies": ["axum", "tokio", "serde"],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 45,
+      "known_challenges": [
+        "Error handling consistency",
+        "Middleware composition",
+        "Test isolation with authentication"
+      ]
+    },
+    {
+      "id": "complex-database-migration",
+      "description": "Create a database migration system that supports: forward migrations, rollback migrations, version tracking, and dry-run mode. The system should read SQL files from a migrations directory, track which migrations have been applied, and support partial failure recovery.",
+      "task_type": "infrastructure",
+      "complexity": "complex",
+      "success_criteria": [
+        "Migration system can apply pending migrations in order",
+        "Rollback functionality works correctly",
+        "Migration state is persisted in database",
+        "Dry-run mode shows changes without applying",
+        "Partial failures leave database in consistent state",
+        "CLI interface for running migrations",
+        "Comprehensive test coverage"
+      ],
+      "validation_script": "scripts/validation/validate_migrations.sh",
+      "context_requirements": {
+        "files_required": [],
+        "dependencies": ["sqlx", "tokio"],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 60,
+      "known_challenges": [
+        "Transaction handling for partial failures",
+        "File ordering and dependency tracking",
+        "Concurrent migration prevention"
+      ]
+    },
+    {
+      "id": "complex-event-system",
+      "description": "Implement a publish-subscribe event system with: typed events, multiple subscribers per event type, async event handlers, event replay from persistent storage, and dead letter queue for failed handlers. Ensure thread-safety and proper error propagation.",
+      "task_type": "code_generation",
+      "complexity": "complex",
+      "success_criteria": [
+        "Events are strongly typed with compile-time safety",
+        "Multiple subscribers can register for same event type",
+        "Async handlers are properly scheduled and awaited",
+        "Events are persisted for replay capability",
+        "Failed handlers are tracked in dead letter queue",
+        "System is thread-safe for concurrent access",
+        "Comprehensive documentation and examples"
+      ],
+      "validation_script": "scripts/validation/validate_event_system.sh",
+      "context_requirements": {
+        "files_required": [],
+        "dependencies": ["tokio", "serde", "async-trait"],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 60,
+      "known_challenges": [
+        "Type erasure for event storage",
+        "Async trait bounds",
+        "Concurrency handling"
+      ]
+    },
+    {
+      "id": "complex-test-framework",
+      "description": "Create a comprehensive test framework for the agent system that includes: mock LLM responses, simulated file system operations, time control for testing timeouts, assertion helpers for agent behavior, and test report generation. The framework should make writing agent tests simple and deterministic.",
+      "task_type": "testing",
+      "complexity": "complex",
+      "success_criteria": [
+        "Mock LLM can return predetermined responses",
+        "File system mock supports all required operations",
+        "Time can be controlled for deterministic timeout testing",
+        "Custom assertion macros for agent behavior",
+        "Test reports are generated in multiple formats (JSON, HTML)",
+        "Framework is well-documented with examples",
+        "Existing tests can be migrated to use framework"
+      ],
+      "validation_script": "scripts/validation/validate_test_framework.sh",
+      "context_requirements": {
+        "files_required": ["src/testing/mod.rs"],
+        "dependencies": ["tokio", "mockall"],
+        "codebase_state": "clean"
+      },
+      "expected_duration_minutes": 90,
+      "known_challenges": [
+        "Designing ergonomic test API",
+        "Thread-local time control",
+        "Integration with existing test infrastructure"
+      ]
+    }
+  ],
+  "complexity_progression": {
+    "simple": {
+      "task_ids": ["simple-hello-world", "simple-fibonacci", "simple-unit-test", "simple-documentation"],
+      "success_threshold": 0.9,
+      "description": "Baseline tasks to verify agent can complete simple, well-defined tasks"
+    },
+    "medium": {
+      "task_ids": ["medium-user-validator", "medium-refactor-function", "medium-fix-memory-leak", "medium-integration-test"],
+      "success_threshold": 0.7,
+      "description": "Tasks with moderate complexity that require understanding context and making decisions"
+    },
+    "complex": {
+      "task_ids": ["complex-api-endpoint", "complex-database-migration", "complex-event-system", "complex-test-framework"],
+      "success_threshold": 0.5,
+      "description": "Complex tasks that test agent limits and multi-step reasoning"
+    }
+  },
+  "evaluation_gates": {
+    "proceed_to_medium": {
+      "requirement": "simple tasks achieve >= 90% success rate",
+      "minimum_completed": 3
+    },
+    "proceed_to_complex": {
+      "requirement": "medium tasks achieve >= 70% success rate", 
+      "minimum_completed": 2
+    }
+  }
+}
+

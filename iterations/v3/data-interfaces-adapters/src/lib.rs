@@ -5,6 +5,7 @@
 //! and actual implementation crates, enabling dependency injection.
 
 pub mod database_operations_adapter;
+pub mod database_operations_port_adapter;
 pub mod mcp_coreml_executor;
 pub mod memory_adapter;
 pub mod orchestration_adapter;
@@ -16,6 +17,7 @@ pub mod worker_adapter;
 pub mod working_spec_converter;
 
 pub use database_operations_adapter::DatabaseOperationsAdapter;
+pub use database_operations_port_adapter::DatabaseOperationsPortAdapter;
 pub use mcp_coreml_executor::{
     create_coreml_executor, wire_coreml_executor_to_mcp_server, RealCoreMLIngestionExecutor,
 };

@@ -851,6 +851,7 @@ impl RefinementLoopCoordinator {
             risk_tier: working_spec.risk_tier as u8,
             previous_reviews: vec![],
             constraints: std::collections::HashMap::new(),
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         // Conduct multi-turn debate

@@ -7,7 +7,7 @@
 
 - **Database**: PostgreSQL on port 5433
 - **Redis**: Running on port 6380
-- **API Server**: Running on port 8080
+- **API Server**: Running on port 8889
 - **Dashboard**: Running on port 3000
 
 ## Test Execution
@@ -112,7 +112,7 @@ cargo test --lib --no-default-features
 ```bash
 cd iterations/v3/testing-validation
 DATABASE_URL="postgresql://test_user:test_password@localhost:5433/test_db" \
-API_BASE_URL="http://localhost:8080" \
+API_BASE_URL="http://localhost:8889" \
 DYLD_FALLBACK_LIBRARY_PATH="/usr/lib/swift:$DYLD_FALLBACK_LIBRARY_PATH" \
 cargo test --lib --features full
 ```

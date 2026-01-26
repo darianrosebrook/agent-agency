@@ -13,3 +13,4 @@ CREATE INDEX IF NOT EXISTS idx_execution_plans_workspace_id
 COMMENT ON COLUMN execution_plans.workspace_id IS 'Optional workspace registry ID for the project/work plan';
 
 
+

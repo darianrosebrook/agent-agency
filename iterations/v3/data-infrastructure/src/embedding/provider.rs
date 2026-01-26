@@ -630,17 +630,38 @@ impl agent_agency_contracts::types::research::EmbeddingProvider for CoreMLEmbedd
     }
 }
 
-/// Dummy provider for testing
+/// Dummy/stub embedding provider for testing and fallback scenarios
+///
+/// WARNING: This provider generates hash-based deterministic embeddings that are NOT
+/// semantically meaningful. Visual search and similarity queries will have degraded quality.
+///
+/// Use cases:
+/// - Unit testing without real model dependencies
+/// - Development environments without GPU/CoreML
+/// - Fallback when real embedding providers are unavailable
+///
+/// For production use, configure a real embedding provider:
+/// - `CoreMLEmbeddingProvider` for macOS with ANE acceleration
+/// - `ClipEmbeddingProvider` for cross-platform CLIP embeddings (requires candle)
+/// - External API providers (OpenAI, Cohere, etc.)
 pub struct DummyEmbeddingProvider {
     dimension: usize,
     model_name: String,
+    /// Track whether warning has been logged to avoid spam
+    warning_logged: std::sync::atomic::AtomicBool,
 }
 
 impl DummyEmbeddingProvider {
     pub fn new(dimension: usize) -> Self {
+        warn!(
+            "DummyEmbeddingProvider initialized - embeddings will be hash-based stubs. \
+             Visual search and similarity queries will have degraded quality. \
+             Configure a real embedding provider for production use."
+        );
         Self {
             dimension,
-            model_name: "dummy".to_string(),
+            model_name: "dummy-stub".to_string(),
+            warning_logged: std::sync::atomic::AtomicBool::new(false),
         }
     }
 }
@@ -648,6 +669,15 @@ impl DummyEmbeddingProvider {
 #[async_trait]
 impl EmbeddingProvider for DummyEmbeddingProvider {
     async fn generate_embeddings(&self, texts: &[String]) -> Result<Vec<EmbeddingVector>> {
+        // Log warning on first use (not just initialization)
+        if !self.warning_logged.swap(true, std::sync::atomic::Ordering::Relaxed) {
+            warn!(
+                "DummyEmbeddingProvider generating {} stub embeddings - \
+                 semantic similarity will not work correctly",
+                texts.len()
+            );
+        }
+
         // Generate deterministic dummy embeddings based on text hash
         let embeddings = texts
             .iter()

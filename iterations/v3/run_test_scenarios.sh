@@ -4,7 +4,7 @@
 
 set -e
 
-API_URL="http://localhost:8080/api/v1/tasks"
+API_URL="http://localhost:8889/api/v1/tasks"
 SUBMITTED_FILE="submitted_tasks_v3.txt"
 
 echo "=== V3 Test Scenario Runner ==="
@@ -82,7 +82,7 @@ echo "Check task status:"
 echo "  cat $SUBMITTED_FILE"
 echo ""
 echo "Individual task status check:"
-echo "  curl -s http://localhost:8080/api/v1/tasks/\$(tail -1 $SUBMITTED_FILE | cut -d'|' -f1) | jq ."
+echo "  curl -s http://localhost:8889/api/v1/tasks/\$(tail -1 $SUBMITTED_FILE | cut -d'|' -f1) | jq ."
 
 
 

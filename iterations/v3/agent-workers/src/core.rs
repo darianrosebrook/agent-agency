@@ -75,7 +75,7 @@ impl MCPWorkerPool {
             workers: Arc::new(RwLock::new(HashMap::new())),
             mcp_integration: Arc::new(MCPIntegration::new(
                 tool_registry,
-                "http://localhost:8080".to_string(),
+                "http://localhost:8889".to_string(),
             )),
             shared_memory_system: shared_memory,
             stats: Arc::new(RwLock::new(WorkerPoolStats {
@@ -178,10 +178,47 @@ impl MCPWorkerPool {
 
         // Find the tool in the MCP registry
         let available_tools = self.mcp_integration.list_tools().await;
+
+        // Early check for empty registry - provides clearer error message
+        if available_tools.is_empty() {
+            tracing::error!(
+                "No tools available in MCP registry - tool registry may not be initialized. \
+                 Task {} requires tool '{}' but registry is empty.",
+                task.id,
+                tool_id
+            );
+            return Err(WorkerError::ToolNotAvailable(
+                format!(
+                    "Tool registry is empty - initialization may have failed. Required tool: {}",
+                    tool_id
+                )
+            ));
+        }
+
+        // Log available tools for debugging
+        let tool_names: Vec<&str> = available_tools.iter().map(|t| t.name.as_str()).collect();
+        debug!(
+            "Looking for tool '{}' among {} available tools: {:?}",
+            tool_id,
+            available_tools.len(),
+            tool_names
+        );
+
         let mcp_tool = available_tools
             .iter()
             .find(|t| t.name == *tool_id)
-            .ok_or_else(|| WorkerError::ToolNotAvailable(tool_id.clone()))?;
+            .ok_or_else(|| {
+                tracing::error!(
+                    "Tool '{}' not found in registry. Available tools: {:?}",
+                    tool_id,
+                    tool_names
+                );
+                WorkerError::ToolNotAvailable(format!(
+                    "Tool '{}' not found. Available: {:?}",
+                    tool_id,
+                    tool_names
+                ))
+            })?;
 
         // Convert task parameters to tool-specific parameters
         // Different tools expect different parameter formats

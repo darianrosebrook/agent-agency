@@ -13,10 +13,11 @@
 
 use anyhow::{anyhow, Result};
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
@@ -107,6 +108,105 @@ pub struct ExecutionResult {
     pub final_verdict: Option<agent_agency_contracts::final_verdict::FinalVerdictContract>,
     pub iterations: u32,
     pub quality_scores: Vec<f64>,
+    /// Observability data for evaluation and debugging
+    pub observability: Option<ExecutionObservability>,
+}
+
+/// Observability data collected during plan execution
+///
+/// Contains all observable events from council sessions, worker actions,
+/// decision points, and coordination events for comprehensive evaluation.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExecutionObservability {
+    /// Council session summaries with judge contributions
+    pub council_sessions: Vec<CouncilSessionSummary>,
+    /// Key decision points during execution
+    pub decision_points: Vec<DecisionPointSummary>,
+    /// Worker execution action summaries
+    pub worker_actions: Vec<WorkerActionSummary>,
+    /// Coordination events timeline
+    pub coordination_events: Vec<CoordinationEventSummary>,
+}
+
+/// Summary of a council session for observability
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilSessionSummary {
+    /// Unique session identifier
+    pub session_id: String,
+    /// When the session occurred
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Phase of council review (e.g., "examination", "pleading")
+    pub phase: String,
+    /// Final verdict from the council
+    pub verdict: String,
+    /// Confidence level of the decision (0.0-1.0)
+    pub confidence: f64,
+    /// Individual judge contributions
+    pub judge_contributions: Vec<JudgeContributionSummary>,
+}
+
+/// Summary of an individual judge's contribution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JudgeContributionSummary {
+    /// Judge identifier
+    pub judge_id: String,
+    /// Judge name for display
+    pub judge_name: String,
+    /// Verdict from this judge
+    pub verdict: String,
+    /// Confidence in the verdict (0.0-1.0)
+    pub confidence: f64,
+    /// Reasoning behind the verdict
+    pub reasoning: String,
+}
+
+/// Summary of a decision point during execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DecisionPointSummary {
+    /// Unique decision identifier
+    pub decision_id: Uuid,
+    /// Type of decision (e.g., "worker_assignment", "quality_gate")
+    pub decision_type: String,
+    /// When the decision was made
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// The option that was chosen
+    pub chosen_option: String,
+    /// Number of alternatives considered
+    pub alternatives_count: usize,
+    /// Confidence in the decision (0.0-1.0)
+    pub confidence: f64,
+    /// Reasoning for the decision
+    pub reasoning: String,
+}
+
+/// Summary of a worker action during execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkerActionSummary {
+    /// Worker identifier
+    pub worker_id: Uuid,
+    /// Action performed
+    pub action: String,
+    /// Milestone this action was part of
+    pub milestone_id: String,
+    /// When the action occurred
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Duration of the action in milliseconds
+    pub duration_ms: u64,
+    /// Whether the action succeeded
+    pub success: bool,
+    /// Error message if the action failed
+    pub error: Option<String>,
+}
+
+/// Summary of a coordination event
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoordinationEventSummary {
+    /// Type of coordination event
+    pub event_type: String,
+    /// When the event occurred
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Additional event details
+    pub details: serde_json::Value,
 }
 
 /// Unified orchestrator - single entry point for all orchestration
@@ -507,6 +607,9 @@ impl UnifiedOrchestrator {
                 metadata: std::collections::HashMap::new(),
             }
         };
+
+        // Initialize observability collector for this execution
+        let mut observability = ExecutionObservability::default();
 
         // Phase 0: Session management and context retrieval (multi-session continuity)
         let _session_id = if let Some(ref session_mgr) = self.session_manager {
@@ -1051,6 +1154,7 @@ impl UnifiedOrchestrator {
                 risk_tier: working_spec.risk_tier as u8,
                 previous_reviews: vec![],
                 constraints: std::collections::HashMap::new(),
+                review_type: crate::judge_backup::types::ReviewType::PlanReview,
             };
 
             // Conduct council review of the execution plan
@@ -1165,6 +1269,67 @@ impl UnifiedOrchestrator {
             execution_state.artifacts = executed_artifacts.clone();
             execution_state.current_phase = "milestones_executed".to_string();
             execution_state.progress_percentage = 50.0;
+
+            // Collect worker action observability data from artifacts
+            for (artifact, milestone) in executed_artifacts
+                .iter()
+                .zip(execution_plan.contract_plan.milestones.iter())
+            {
+                // Extract worker_id from provenance
+                let worker_id = artifact
+                    .provenance
+                    .worker_id
+                    .as_ref()
+                    .and_then(|wid| Uuid::parse_str(wid).ok())
+                    .unwrap_or_else(Uuid::new_v4);
+
+                // Determine success based on test results
+                let success = artifact.tests.unit_tests.failed == 0
+                    && artifact.tests.integration_tests.failed == 0
+                    && artifact.linting.errors == 0;
+
+                let error = if !success {
+                    let mut errors = Vec::new();
+                    if artifact.tests.unit_tests.failed > 0 {
+                        errors.push(format!("{} unit tests failed", artifact.tests.unit_tests.failed));
+                    }
+                    if artifact.tests.integration_tests.failed > 0 {
+                        errors.push(format!("{} integration tests failed", artifact.tests.integration_tests.failed));
+                    }
+                    if artifact.linting.errors > 0 {
+                        errors.push(format!("{} linting errors", artifact.linting.errors));
+                    }
+                    if errors.is_empty() { None } else { Some(errors.join("; ")) }
+                } else {
+                    None
+                };
+
+                let worker_action = WorkerActionSummary {
+                    worker_id,
+                    action: "milestone_execution".to_string(),
+                    milestone_id: milestone.id.clone(),
+                    timestamp: artifact.provenance.started_at,
+                    duration_ms: artifact.provenance.duration_ms,
+                    success,
+                    error,
+                };
+                observability.worker_actions.push(worker_action);
+
+                // Add coordination event for milestone completion
+                observability.coordination_events.push(CoordinationEventSummary {
+                    event_type: "milestone_completed".to_string(),
+                    timestamp: artifact.provenance.completed_at.unwrap_or_else(Utc::now),
+                    details: serde_json::json!({
+                        "milestone_id": milestone.id,
+                        "worker_id": worker_id.to_string(),
+                        "success": success,
+                        "duration_ms": artifact.provenance.duration_ms,
+                        "files_modified": artifact.code_changes.statistics.files_modified,
+                        "lines_added": artifact.code_changes.statistics.lines_added,
+                        "lines_removed": artifact.code_changes.statistics.lines_removed,
+                    }),
+                });
+            }
 
             // Create checkpoint after milestone execution
             if let Some(ref persistence) = self.state_persistence {
@@ -1369,6 +1534,66 @@ impl UnifiedOrchestrator {
                     .await?;
 
                 needs_refinement = adjudication_result.needs_refinement;
+
+                // Collect council session observability data
+                let verdict_str = match &adjudication_result.verdict.decision {
+                    agent_agency_contracts::final_verdict::FinalDecision::Accept => "accept",
+                    agent_agency_contracts::final_verdict::FinalDecision::Reject => "reject",
+                    agent_agency_contracts::final_verdict::FinalDecision::Modify => "modify",
+                };
+
+                // Extract judge contributions from votes
+                let judge_contributions: Vec<JudgeContributionSummary> = adjudication_result
+                    .verdict
+                    .votes
+                    .iter()
+                    .map(|vote| {
+                        let verdict = match &vote.verdict {
+                            agent_agency_contracts::final_verdict::VoteVerdict::Pass => "pass",
+                            agent_agency_contracts::final_verdict::VoteVerdict::Fail => "fail",
+                            agent_agency_contracts::final_verdict::VoteVerdict::Uncertain => "uncertain",
+                        };
+                        JudgeContributionSummary {
+                            judge_id: vote.judge_id.clone(),
+                            judge_name: vote.judge_id.clone(), // Use judge_id as name
+                            verdict: verdict.to_string(),
+                            confidence: vote.weight as f64,
+                            reasoning: String::new(), // Vote entries don't include reasoning
+                        }
+                    })
+                    .collect();
+
+                // Calculate overall confidence from claim verification
+                let overall_confidence = adjudication_result
+                    .claim_extraction_results
+                    .as_ref()
+                    .map(|claims| claims.verification_confidence)
+                    .unwrap_or(0.0);
+
+                let council_summary = CouncilSessionSummary {
+                    session_id: format!("adjudication_{}", plan_id),
+                    timestamp: Utc::now(),
+                    phase: format!("{:?}", adjudication_result.stage),
+                    verdict: verdict_str.to_string(),
+                    confidence: overall_confidence,
+                    judge_contributions,
+                };
+                observability.council_sessions.push(council_summary);
+
+                // Add a coordination event for the adjudication
+                observability.coordination_events.push(CoordinationEventSummary {
+                    event_type: "adjudication_completed".to_string(),
+                    timestamp: Utc::now(),
+                    details: serde_json::json!({
+                        "stage": format!("{:?}", adjudication_result.stage),
+                        "approved": adjudication_result.approved,
+                        "needs_refinement": adjudication_result.needs_refinement,
+                        "claims_verified": adjudication_result.claim_extraction_results.as_ref()
+                            .map(|c| c.verified_claims).unwrap_or(0),
+                        "claims_total": adjudication_result.claim_extraction_results.as_ref()
+                            .map(|c| c.total_claims).unwrap_or(0),
+                    }),
+                });
 
                 if !adjudication_result.approved && !needs_refinement {
                     return Err(anyhow::anyhow!(
@@ -1806,6 +2031,7 @@ impl UnifiedOrchestrator {
             final_verdict,
             iterations,
             quality_scores,
+            observability: Some(observability),
         })
     }
 
@@ -3583,6 +3809,7 @@ impl CouncilReviewer for UnifiedCouncilReviewer {
             risk_tier: working_spec.risk_tier as u8,
             previous_reviews: vec![],
             constraints: std::collections::HashMap::new(),
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         let session = self

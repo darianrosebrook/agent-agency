@@ -1,15 +1,25 @@
 #!/bin/bash
 # Setup script for fresh PostgreSQL database
 # This script creates the user, database, and enables pgvector
+# @author @darianrosebrook
+#
+# Environment Variables (with defaults):
+#   DB_HOST       - Database host (default: 127.0.0.1)
+#   DB_PORT       - Database port (default: 5432)
+#   DB_USER       - Your local PostgreSQL user for admin operations (default: current user)
+#   DB_NAME       - Database name to create (default: agent_agency)
+#   DB_PASSWORD   - Password for agent_agency user (default: agent_agency_dev)
 
 set -e
 
 # Add PostgreSQL binaries to PATH
 export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
 
-DB_USER="${DB_USER:-darianrosebrook}"
-DB_NAME="agent_agency"
-DB_PASSWORD="agent_agency_dev"
+# Admin user for creating database (your local PostgreSQL user)
+DB_USER="${DB_USER:-$(whoami)}"
+# Standard configuration for the application
+DB_NAME="${DB_NAME:-agent_agency}"
+DB_PASSWORD="${DB_PASSWORD:-agent_agency_dev}"
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="${DB_PORT:-5432}"
 

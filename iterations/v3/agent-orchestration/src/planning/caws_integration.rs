@@ -363,6 +363,7 @@ impl CawsPlanBridge {
         Ok(ContractExecutionPlan {
             id: uuid::Uuid::new_v4(),
             session_id: uuid::Uuid::new_v4(),
+            workspace_id: None,
             working_spec_id: working_spec.id.clone(),
             contract_plan: working_spec.clone(),
             title: working_spec.title.clone(),

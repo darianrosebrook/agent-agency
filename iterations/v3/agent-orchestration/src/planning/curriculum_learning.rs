@@ -267,6 +267,64 @@ pub struct SuccessCriteria {
     pub max_attempts: Option<usize>,
 }
 
+/// Curriculum profile for an agent - tracks skill progression and milestones
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CurriculumProfile {
+    /// Agent ID
+    pub agent_id: Uuid,
+
+    /// Skill levels by domain (domain name -> level)
+    pub skill_levels: HashMap<String, u32>,
+
+    /// Completed milestone IDs
+    pub completed_milestones: Vec<String>,
+
+    /// Active milestone IDs currently being worked on
+    pub active_milestones: Vec<String>,
+
+    /// Profile creation timestamp
+    pub created_at: DateTime<Utc>,
+
+    /// Last update timestamp
+    pub updated_at: DateTime<Utc>,
+}
+
+impl CurriculumProfile {
+    /// Create a new curriculum profile for an agent
+    pub fn new(agent_id: Uuid) -> Self {
+        Self {
+            agent_id,
+            skill_levels: HashMap::new(),
+            completed_milestones: Vec::new(),
+            active_milestones: Vec::new(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+}
+
+/// Learning outcome from a task execution (re-exported for convenience)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LearningOutcome {
+    /// Agent ID that executed the task
+    pub agent_id: Uuid,
+
+    /// Task type/domain
+    pub task_type: String,
+
+    /// Whether the task was successful
+    pub success: bool,
+
+    /// Quality score (0.0-1.0)
+    pub quality_score: f64,
+
+    /// Execution time in milliseconds
+    pub execution_time_ms: u64,
+
+    /// Timestamp of the outcome
+    pub timestamp: DateTime<Utc>,
+}
+
 /// Curriculum path definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurriculumPath {

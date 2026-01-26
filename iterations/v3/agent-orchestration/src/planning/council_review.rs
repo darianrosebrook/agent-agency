@@ -584,6 +584,7 @@ impl CouncilPlanReview {
             risk_tier,
             previous_reviews: vec![],
             constraints,
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         // Submit to real council for full evaluation

@@ -1,5 +1,9 @@
 # Agent Agency V3 Database Initialization Guide
 
+> **Note:** For a streamlined setup experience, see the **[Getting Started Guide](./docs/GETTING_STARTED.md)** which covers both Docker and local PostgreSQL options with troubleshooting.
+>
+> This document provides detailed Docker-specific configuration and migration reference.
+
 ## Overview
 
 This document describes how to initialize the Agent Agency V3 database from a fresh start.
@@ -44,7 +48,7 @@ done
 ```bash
 export DATABASE_URL="postgresql://test_user:test_password@localhost:5433/agent_agency_test"
 export RUST_LOG=info
-cargo run --bin agent-agency-api-server --features orchestration,testing -- --port 8080
+cargo run --bin agent-agency-api-server --features orchestration,testing -- --port 8889
 ```
 
 ## Migration Files
@@ -133,19 +137,19 @@ Once the server is running, test with:
 
 ```bash
 # Health check
-curl http://localhost:8080/api/v1/system/health
+curl http://localhost:8889/api/v1/system/health
 
 # List tasks
-curl http://localhost:8080/api/v1/tasks
+curl http://localhost:8889/api/v1/tasks
 
 # List projects
-curl http://localhost:8080/api/v1/projects
+curl http://localhost:8889/api/v1/projects
 
 # List agents
-curl http://localhost:8080/api/v1/agents
+curl http://localhost:8889/api/v1/agents
 
 # Submit a task
-curl -X POST http://localhost:8080/api/v1/tasks \
+curl -X POST http://localhost:8889/api/v1/tasks \
   -H "Content-Type: application/json" \
   -d '{"description": "Test task", "execution_mode": "dry-run", "risk_tier": "3"}'
 ```

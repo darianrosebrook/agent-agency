@@ -16,7 +16,10 @@ use agent_agency_contracts::{
     WorkingSpecConstraints, WorkingSpecContext,
 };
 use agent_orchestration::orchestration::unified_orchestrator::UnifiedOrchestrator;
-use data_infrastructure::TaskExecutor;
+use data_infrastructure::{
+    CouncilSessionData, CoordinationEventData, DecisionPointData, ExecutionResultWithObservability,
+    JudgeContributionData, TaskExecutor, TaskObservabilityData, WorkerActionData,
+};
 
 /// Task executor that wraps UnifiedOrchestrator
 pub struct UnifiedOrchestratorTaskExecutor {
@@ -36,8 +39,17 @@ impl TaskExecutor for UnifiedOrchestratorTaskExecutor {
         &self,
         task_descriptor: &TaskDescriptor,
     ) -> Result<ExecutionArtifacts, anyhow::Error> {
+        // Delegate to execute_task_with_observability and extract artifacts
+        let result = self.execute_task_with_observability(task_descriptor).await?;
+        Ok(result.artifacts)
+    }
+
+    async fn execute_task_with_observability(
+        &self,
+        task_descriptor: &TaskDescriptor,
+    ) -> Result<ExecutionResultWithObservability, anyhow::Error> {
         info!(
-            "Executing task {} via UnifiedOrchestrator",
+            "Executing task {} via UnifiedOrchestrator with observability",
             task_descriptor.task_id
         );
 
@@ -58,22 +70,76 @@ impl TaskExecutor for UnifiedOrchestratorTaskExecutor {
         );
 
         // Extract ExecutionArtifacts from ExecutionResult
-        // Use the first artifact if available, or create a summary artifact
-        if let Some(first_artifact) = execution_result.artifacts.first() {
-            // Use the first artifact as the primary result
-            Ok(first_artifact.clone())
+        let artifacts = if let Some(first_artifact) = execution_result.artifacts.first() {
+            first_artifact.clone()
         } else {
             // Create a summary artifact from execution result
             let mut artifact = ExecutionArtifacts::default();
             artifact.task_id = execution_result.plan_id;
             artifact.working_spec_id = working_spec.id.clone();
             artifact.iteration = execution_result.iterations;
-
             artifact.metadata =
                 Some(agent_agency_contracts::execution_artifacts::ArtifactMetadata::default());
+            artifact
+        };
 
-            Ok(artifact)
-        }
+        // Convert ExecutionObservability to TaskObservabilityData
+        let observability = execution_result.observability.map(|obs| {
+            TaskObservabilityData {
+                council_sessions: obs.council_sessions.into_iter().map(|session| {
+                    CouncilSessionData {
+                        session_id: session.session_id,
+                        timestamp: session.timestamp,
+                        phase: session.phase,
+                        verdict: session.verdict,
+                        confidence: session.confidence,
+                        judge_contributions: session.judge_contributions.into_iter().map(|contrib| {
+                            JudgeContributionData {
+                                judge_id: contrib.judge_id,
+                                judge_name: contrib.judge_name,
+                                verdict: contrib.verdict,
+                                confidence: contrib.confidence,
+                                reasoning: contrib.reasoning,
+                            }
+                        }).collect(),
+                    }
+                }).collect(),
+                worker_actions_data: obs.worker_actions.into_iter().map(|action| {
+                    WorkerActionData {
+                        worker_id: action.worker_id,
+                        action: action.action,
+                        milestone_id: action.milestone_id,
+                        timestamp: action.timestamp,
+                        duration_ms: action.duration_ms,
+                        success: action.success,
+                        error: action.error,
+                    }
+                }).collect(),
+                decision_points: obs.decision_points.into_iter().map(|dp| {
+                    DecisionPointData {
+                        decision_id: dp.decision_id,
+                        decision_type: dp.decision_type,
+                        timestamp: dp.timestamp,
+                        chosen_option: dp.chosen_option,
+                        alternatives_count: dp.alternatives_count,
+                        confidence: dp.confidence,
+                        reasoning: dp.reasoning,
+                    }
+                }).collect(),
+                coordination_events: obs.coordination_events.into_iter().map(|event| {
+                    CoordinationEventData {
+                        event_type: event.event_type,
+                        timestamp: event.timestamp,
+                        details: event.details,
+                    }
+                }).collect(),
+            }
+        });
+
+        Ok(ExecutionResultWithObservability {
+            artifacts,
+            observability,
+        })
     }
 }
 

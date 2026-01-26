@@ -161,7 +161,7 @@ impl Default for MCPConfig {
                 server_name: "agent-agency-mcp".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
                 host: "127.0.0.1".to_string(),
-                port: 8080,
+                port: 8889,
                 enable_tls: false,
                 enable_websocket: true,
                 enable_http: true,

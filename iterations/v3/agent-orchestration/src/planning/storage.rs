@@ -520,6 +520,7 @@ impl PlanningStorage {
 
         let create_plan = CreateExecutionPlan {
             id: plan.contract_plan.id,
+            workspace_id: None,
             title: plan.contract_plan.title.clone(),
             overview: plan.contract_plan.overview.clone(),
             working_spec_id,
@@ -844,6 +845,7 @@ impl PlanningStorage {
         let contract_plan = ContractExecutionPlan {
             id: db_plan.id,
             session_id: db_plan.session_id,
+            workspace_id: db_plan.workspace_id.clone(),
             working_spec_id: db_plan.working_spec_id,
             contract_plan: working_spec,
             title: db_plan.title,
@@ -1116,6 +1118,7 @@ mod tests {
             let db_plan = crate::planning::data_infrastructure_types::models::ExecutionPlan {
                 id: plan.id,
                 session_id: Uuid::new_v4(),
+                workspace_id: None,
                 working_spec_id: plan
                     .working_spec_id
                     .unwrap_or_else(|| format!("PLAN-{}", plan.id)),
@@ -1665,6 +1668,7 @@ mod tests {
             contract_plan: agent_agency_contracts::planning_io::ExecutionPlan {
                 id: Uuid::new_v4(),
                 session_id: Uuid::new_v4(),
+                workspace_id: None,
                 working_spec_id: "test-spec".to_string(),
                 contract_plan: agent_agency_contracts::WorkingSpec {
                     version: "1.0".to_string(),

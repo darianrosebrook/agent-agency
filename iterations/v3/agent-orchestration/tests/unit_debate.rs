@@ -15,7 +15,7 @@ use agent_orchestration::council::{
     Council, DebateConfig, DebateResult, DebateStatus, SolutionScore, WorkerSolution,
     WorkerPlea, SolutionEvidence, BudgetAdherence,
 };
-use agent_orchestration::judge_backup::types::ReviewContext;
+use agent_orchestration::judge_backup::types::{ReviewContext, ReviewType};
 
 /// Test helper to create mock worker solutions
 fn create_mock_solutions(count: usize) -> Vec<WorkerSolution> {
@@ -74,6 +74,7 @@ fn create_mock_review_context() -> ReviewContext {
         risk_tier: 2,
         previous_reviews: vec![],
         constraints: HashMap::new(),
+        review_type: ReviewType::default(),
     }
 }
 

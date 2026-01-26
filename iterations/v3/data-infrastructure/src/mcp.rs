@@ -61,7 +61,7 @@ mod mcp_module {
                     server_name: "agent-agency-mcp".to_string(),
                     version: env!("CARGO_PKG_VERSION").to_string(),
                     host: "127.0.0.1".to_string(),
-                    port: 8080,
+                    port: 8889,
                     enable_tls: false,
                     enable_http: true,
                     enable_websocket: true,
@@ -546,7 +546,7 @@ mod mcp_module {
         impl McpServerBuilder {
             pub async fn new() -> Self {
                 Self {
-                    address: "127.0.0.1:8080".to_string(),
+                    address: "127.0.0.1:8889".to_string(),
                     auto_discovery: false,
                     caws_checking: false,
                     database_client: Arc::new(
@@ -586,7 +586,7 @@ mod mcp_module {
         impl Default for McpConfig {
             fn default() -> Self {
                 Self {
-                    server: ServerConfig { port: 8080 },
+                    server: ServerConfig { port: 8889 },
                 }
             }
         }
@@ -618,7 +618,7 @@ mod mcp_module {
         #[tokio::test]
         async fn test_default_config() {
             let config = McpConfig::default();
-            assert_eq!(config.server.port, 8080);
+            assert_eq!(config.server.port, 8889);
         }
     }
 }

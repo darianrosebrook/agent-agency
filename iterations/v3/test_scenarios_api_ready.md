@@ -203,7 +203,7 @@
 # V3 Test Scenario Runner
 
 SCENARIOS_DIR="$(dirname "$0")"
-API_URL="http://localhost:8080/api/v1/tasks"
+API_URL="http://localhost:8889/api/v1/tasks"
 
 echo "=== V3 Test Scenario Runner ==="
 echo "API URL: $API_URL"

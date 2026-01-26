@@ -305,6 +305,7 @@ impl LegacyOrchestratorAdapter {
             risk_tier,
             previous_reviews: vec![],
             constraints: std::collections::HashMap::new(),
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         // Conduct full council review

@@ -412,6 +412,7 @@ impl ToolChainBridge {
             execution_context: None,
             id: uuid::Uuid::new_v4(),
             session_id: uuid::Uuid::new_v4(),
+            workspace_id: None,
             working_spec_id: working_spec.id.clone(),
             title: format!("Tool Chain Plan: {}", working_spec.title),
             overview: format!("Generated tool chain for: {}", working_spec.title),

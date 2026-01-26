@@ -1823,7 +1823,7 @@ impl TaskExecutorTrait for TaskExecutor {
             Err(e) => {
                 warn!("Failed to resolve worker endpoint for {}: {}", worker_id, e);
                 // Try default endpoint as fallback
-                format!("http://worker-{}.local:8080", worker_id)
+                format!("http://worker-{}.local:8889", worker_id)
             }
         };
 
@@ -1880,7 +1880,7 @@ impl TaskExecutor {
         // Priority order:
         // 1. Environment variable: WORKER_{UUID}_ENDPOINT
         // 2. Database query for worker endpoint
-        // 3. Default pattern: http://worker-{id}.local:8080
+        // 3. Default pattern: http://worker-{id}.local:8889
 
         // Check environment variable first (format: WORKER_{UUID}_ENDPOINT)
         let env_key = format!(
@@ -1912,29 +1912,29 @@ impl TaskExecutor {
                         // Validate endpoint format (basic validation)
                         if endpoint.is_empty() {
                             warn!("Worker {} has empty endpoint in database, using default pattern", worker_id);
-                            format!("http://worker-{}.local:8080", worker_id)
+                            format!("http://worker-{}.local:8889", worker_id)
                         } else if endpoint.starts_with("http://") || endpoint.starts_with("https://") {
                             info!("Found worker endpoint from database for worker {}: {}", worker_id, endpoint);
                             endpoint
                         } else {
                             warn!("Worker {} has invalid endpoint format '{}' in database, using default pattern", worker_id, endpoint);
-                            format!("http://worker-{}.local:8080", worker_id)
+                            format!("http://worker-{}.local:8889", worker_id)
                         }
                     }
                     Err(e) => {
                         warn!("Failed to extract endpoint from database row for worker {}: {}, using default pattern", worker_id, e);
-                        format!("http://worker-{}.local:8080", worker_id)
+                        format!("http://worker-{}.local:8889", worker_id)
                     }
                 }
             }
             Ok(None) => {
                 warn!("Worker {} not found in database or not active, using default pattern", worker_id);
-                format!("http://worker-{}.local:8080", worker_id)
+                format!("http://worker-{}.local:8889", worker_id)
             }
             Err(e) => {
                 warn!("Database query failed for worker {} endpoint: {}, using default pattern", worker_id, e);
                 // Fallback to default pattern on database error
-                format!("http://worker-{}.local:8080", worker_id)
+                format!("http://worker-{}.local:8889", worker_id)
             }
         };
 

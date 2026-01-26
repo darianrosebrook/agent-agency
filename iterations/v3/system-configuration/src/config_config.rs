@@ -431,7 +431,7 @@ impl AppConfig {
             },
             server: ServerConfig {
                 host: "127.0.0.1".to_string(),
-                port: 8080,
+                port: 8889,
                 workers: 4,
                 max_connections: 1000,
                 timeout_seconds: 30,
@@ -639,7 +639,7 @@ impl AppConfig {
                     debug: Some(true),
                     log_level: Some("debug".to_string()),
                     database_url: Some("postgresql://localhost:5432/agent_agency_dev".to_string()),
-                    server_port: Some(8080),
+                    server_port: Some(8889),
                     enable_metrics: Some(true),
                 }),
                 staging: Some(EnvironmentOverrides {
@@ -648,7 +648,7 @@ impl AppConfig {
                     database_url: Some(
                         "postgresql://staging-db:5432/agent_agency_staging".to_string(),
                     ),
-                    server_port: Some(8080),
+                    server_port: Some(8889),
                     enable_metrics: Some(true),
                 }),
                 production: Some(EnvironmentOverrides {

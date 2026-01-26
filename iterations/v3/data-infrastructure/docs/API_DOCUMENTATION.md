@@ -13,11 +13,11 @@ The Agent Agency API now has comprehensive OpenAPI 3.0 documentation with intera
 ## Access Points
 
 ### Interactive Documentation (Swagger UI)
-- **URL:** `http://localhost:8080/swagger-ui/`
+- **URL:** `http://localhost:8889/swagger-ui/`
 - **Description:** Interactive API explorer with try-it-out functionality
 
 ### OpenAPI JSON Specification
-- **URL:** `http://localhost:8080/api-docs/openapi.json`
+- **URL:** `http://localhost:8889/api-docs/openapi.json`
 - **Description:** Machine-readable OpenAPI 3.0 specification in JSON format
 
 ## Documented Endpoints
@@ -216,12 +216,12 @@ Both methods are documented in the OpenAPI spec under security schemes.
 
 2. Open Swagger UI:
    ```
-   http://localhost:8080/swagger-ui/
+   http://localhost:8889/swagger-ui/
    ```
 
 3. Or fetch the OpenAPI JSON:
    ```bash
-   curl http://localhost:8080/api-docs/openapi.json | jq
+   curl http://localhost:8889/api-docs/openapi.json | jq
    ```
 
 ### Generating TypeScript Types
@@ -229,7 +229,7 @@ Both methods are documented in the OpenAPI spec under security schemes.
 You can use tools like `openapi-typescript` to generate TypeScript types:
 
 ```bash
-npx openapi-typescript http://localhost:8080/api-docs/openapi.json -o src/types/api.ts
+npx openapi-typescript http://localhost:8889/api-docs/openapi.json -o src/types/api.ts
 ```
 
 ## Files Modified

@@ -66,7 +66,12 @@ pub use simple_client::DatabaseClient;
 pub use simple_client::ProvenanceClientAdapter;
 
 // Export orchestrator service
-pub use orchestrator_service::{OrchestratorService, TaskExecutor};
+pub use orchestrator_service::{
+    ChainOfThoughtEntry, CoordinationEventData, CouncilDecision, CouncilSessionData,
+    DecisionPointData, ExecutionResultWithObservability, JudgeContributionData,
+    OrchestratorService, TaskExecutor, TaskExecutionState, TaskObservabilityData, TaskStatus,
+    TaskSummary, WorkerAction, WorkerActionData,
+};
 
 // Export database operations factory
 pub use database_operations::{

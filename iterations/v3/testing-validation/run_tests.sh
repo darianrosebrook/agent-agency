@@ -11,7 +11,7 @@ export DYLD_FALLBACK_LIBRARY_PATH="/usr/lib/swift:${DYLD_FALLBACK_LIBRARY_PATH:-
 export DATABASE_URL="${DATABASE_URL:-postgresql://test_user:test_password@localhost:5433/test_db}"
 
 # Set API base URL if not provided
-export API_BASE_URL="${API_BASE_URL:-http://localhost:8080}"
+export API_BASE_URL="${API_BASE_URL:-http://localhost:8889}"
 
 # Run tests
 cd "$(dirname "$0")/.."

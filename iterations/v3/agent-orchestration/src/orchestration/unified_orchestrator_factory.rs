@@ -37,7 +37,8 @@ use crate::planning::{
     worker_lifecycle_manager::WorkerLifecycleManager,
     worktree_manager::{WorktreeManager, WorktreeManagerConfig},
 };
-use crate::planning::DatabaseOperations;
+use crate::planning::{DatabaseOperations, database_operations_bridge::DatabaseOperationsBridge};
+use agent_agency_contracts::ports::DatabaseOperationsPort;
 use crate::verdict_aggregation::{
     AggregationConfig, DissentHandling, RiskAggregationStrategy, VerdictAggregator,
 };
@@ -222,8 +223,11 @@ impl UnifiedOrchestratorFactory {
         };
 
         // Create UnifiedOrchestratorConfig (needed for worktree_manager)
+        // Council review re-enabled after improving verdict aggregation to handle
+        // weak consensus without dissent (common for plan reviews) more gracefully.
+        // See EVALUATION_FIX_PLAN.md for details on the improvements.
         let config = UnifiedOrchestratorConfig {
-            enable_council_review: true,
+            enable_council_review: true, // Re-enabled after fixing workspace creation hang
             enable_refinement: true,
             enable_worktree_isolation: true,
             worktree_base_path: PathBuf::from("/tmp/agent-agency-worktrees"),
@@ -260,11 +264,34 @@ impl UnifiedOrchestratorFactory {
         // Create ToolRegistry with real FileOperationsService for MCP tools
         // Use helper function from agent-workers that has access to both agent_mcp and data-infrastructure
         let repo_path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        let tool_registry = agent_workers::create_tool_registry_with_file_ops(repo_path)
+        let tool_registry = agent_workers::create_tool_registry_with_file_ops(repo_path.clone())
             .await
             .map_err(|e| {
                 anyhow::anyhow!("Failed to create tool registry with file operations: {}", e)
             })?;
+
+        // Verify tool registry initialization - ensure tools were actually registered
+        let registered_tools = tool_registry.get_all_tools().await;
+        let tool_names: Vec<&str> = registered_tools.iter().map(|t| t.name.as_str()).collect();
+        info!(
+            "Tool registry initialized with {} tools: {:?}",
+            registered_tools.len(),
+            tool_names
+        );
+
+        // Fail fast if critical tools are missing
+        let required_tools = ["file_edit", "file_read"];
+        for required_tool in &required_tools {
+            if !tool_names.contains(required_tool) {
+                return Err(anyhow::anyhow!(
+                    "Critical tool '{}' not found in tool registry. Available tools: {:?}. \
+                     Tool registry initialization may have failed.",
+                    required_tool,
+                    tool_names
+                ));
+            }
+        }
+        info!("Tool registry verification passed - all required tools available");
 
         // Use the existing memory_system for workers (already created above)
         #[cfg(not(feature = "memory"))]
@@ -1021,6 +1048,7 @@ mod database_operations_adapter {
             Ok(models::ExecutionPlan {
                 id: plan.id,
                 session_id,
+                workspace_id: None,
                 working_spec_id,
                 title: plan.title,
                 overview: Some(plan.overview),
@@ -1066,6 +1094,7 @@ mod database_operations_adapter {
                 models::ExecutionPlan {
                     id,
                     session_id,
+                    workspace_id: r.try_get::<Option<String>, _>("workspace_id").ok().flatten(),
                     working_spec_id,
                     title: r.get("title"),
                     overview: r.try_get::<Option<String>, _>("overview").ok().flatten(),
@@ -1133,6 +1162,7 @@ mod database_operations_adapter {
                     models::ExecutionPlan {
                         id,
                         session_id,
+                        workspace_id: r.try_get::<Option<String>, _>("workspace_id").ok().flatten(),
                         working_spec_id,
                         title: r.get("title"),
                         overview: r.try_get::<Option<String>, _>("overview").ok().flatten(),
@@ -1769,7 +1799,7 @@ mod database_operations_adapter {
                 .get("endpoint")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
-                .unwrap_or_else(|| "http://localhost:8080".to_string());
+                .unwrap_or_else(|| "http://localhost:8889".to_string());
             let weight = judge
                 .configuration
                 .get("weight")

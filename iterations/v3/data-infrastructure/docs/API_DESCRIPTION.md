@@ -17,7 +17,7 @@ The Agent Agency API provides comprehensive endpoints for:
 
 ## Base URL
 
-- **Development**: `http://localhost:8080`
+- **Development**: `http://localhost:8889`
 - **Production**: `https://api.agent-agency.dev`
 
 ## Authentication

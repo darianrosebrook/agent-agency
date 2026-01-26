@@ -38,6 +38,16 @@ pub struct JudgeHealthMetrics {
     pub last_health_check: DateTime<Utc>,
 }
 
+/// The type of review being conducted
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
+pub enum ReviewType {
+    /// Plan review - evaluating a task description/spec (lenient thresholds)
+    #[default]
+    PlanReview,
+    /// Implementation review - evaluating actual code (strict thresholds)
+    ImplementationReview,
+}
+
 /// Context for a review session
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -52,6 +62,10 @@ pub struct ReviewContext {
     pub previous_reviews: Vec<PreviousReview>,
     /// Constraints for the review
     pub constraints: HashMap<String, String>,
+    /// Type of review - plan (lenient) or implementation (strict)
+    /// Defaults to PlanReview if not specified.
+    #[serde(default)]
+    pub review_type: ReviewType,
 }
 
 /// Previous review information

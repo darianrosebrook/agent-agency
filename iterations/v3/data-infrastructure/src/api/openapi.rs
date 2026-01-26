@@ -155,7 +155,7 @@ use utoipa_swagger_ui::SwaggerUi;
         )
     ),
     servers(
-        (url = "http://localhost:8080", description = "Local development server"),
+        (url = "http://localhost:8889", description = "Local development server"),
         (url = "https://api.agent-agency.dev", description = "Production server")
     )
 )]

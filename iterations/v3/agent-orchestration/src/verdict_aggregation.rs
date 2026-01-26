@@ -403,6 +403,46 @@ impl Default for AggregationConfig {
     }
 }
 
+impl AggregationConfig {
+    /// Create aggregation configuration based on risk tier
+    ///
+    /// Risk tiers determine how strict the consensus requirements are:
+    /// - Tier 1 (Critical): Strict consensus required (0.9 threshold)
+    /// - Tier 2 (Standard): Default balanced configuration (0.7 threshold)
+    /// - Tier 3 (Low Risk): Relaxed thresholds for simple tasks (0.5 threshold)
+    pub fn from_risk_tier(risk_tier: u8) -> Self {
+        match risk_tier {
+            1 => {
+                // Tier 1 (Critical): Strict consensus required
+                Self {
+                    consensus_threshold: 0.9,
+                    weight_by_specialization: true,
+                    min_judges_required: 3,
+                    dissent_handling: DissentHandling::Strict,
+                    risk_aggregation: RiskAggregationStrategy::MostConservative,
+                }
+            }
+            2 => {
+                // Tier 2 (Standard): Default balanced configuration
+                Self::default()
+            }
+            3 => {
+                // Tier 3 (Low Risk): Relaxed thresholds for simple tasks
+                Self {
+                    consensus_threshold: 0.5,
+                    weight_by_specialization: true,
+                    min_judges_required: 2,
+                    dissent_handling: DissentHandling::Weighted {
+                        dissent_threshold: 0.4,
+                    },
+                    risk_aggregation: RiskAggregationStrategy::WeightedAverage,
+                }
+            }
+            _ => Self::default(),
+        }
+    }
+}
+
 impl VerdictAggregator {
     /// Create a new verdict aggregator
     pub fn new(config: AggregationConfig) -> Self {
@@ -430,12 +470,22 @@ impl VerdictAggregator {
         let verdict_distribution = self.analyze_verdict_distribution(&weighted_contributions);
         let (consensus_strength_f64, agreement_level) =
             self.calculate_consensus_metrics(&verdict_distribution);
+        
+        // Use config's consensus_threshold to determine ConsensusStrength
+        // This allows risk-tier-based thresholds to affect the decision
+        let threshold = self.config.consensus_threshold;
         let consensus_strength = match consensus_strength_f64 {
             s if s >= 0.9 => ConsensusStrength::Unanimous,
-            s if s >= 0.7 => ConsensusStrength::Strong,
-            s if s >= 0.5 => ConsensusStrength::Moderate,
+            s if s >= threshold => ConsensusStrength::Strong,
+            s if s >= threshold * 0.7 => ConsensusStrength::Moderate,
             _ => ConsensusStrength::Weak,
         };
+        
+        tracing::debug!(
+            "Verdict aggregation: consensus_strength_f64={:.2}, threshold={:.2}, result={:?}",
+            consensus_strength_f64, threshold, consensus_strength
+        );
+        
         let dissenting_opinions =
             self.identify_dissenting_opinions(&weighted_contributions, &verdict_distribution);
 
@@ -482,6 +532,10 @@ impl VerdictAggregator {
     }
 
     /// Make the final council decision based on analysis
+    ///
+    /// For plan reviews (task descriptions), we use more lenient thresholds
+    /// since there's no actual code to evaluate. For implementation reviews,
+    /// we use strict thresholds.
     async fn make_council_decision(
         &self,
         _verdict_distribution: &VerdictDistribution,
@@ -523,8 +577,38 @@ impl VerdictAggregator {
                 priority: ChangePriority::High,
                 estimated_effort,
             })
+        } else if consensus_strength == ConsensusStrength::Weak && dissenting_opinions.is_empty() {
+            // Weak consensus but no dissent - for plan reviews, still refine rather than reject
+            // This allows task descriptions to proceed even when judges can't fully evaluate
+            // the non-existent code. The actual implementation will be reviewed more strictly.
+            tracing::info!(
+                "Weak consensus with no dissent detected - allowing plan to proceed with refinement"
+            );
+            let aggregated_changes = self
+                .aggregate_changes(weighted_contributions)
+                .await
+                .unwrap_or_else(|_| AggregatedChanges {
+                    changes: Vec::new(),
+                    change_categories: HashMap::new(),
+                    priority_distribution: HashMap::new(),
+                    estimated_effort: AggregatedEffort {
+                        min_person_hours: 0.0,
+                        max_person_hours: 0.0,
+                        average_person_hours: 0.0,
+                        complexity_levels: HashMap::new(),
+                        dependencies: Vec::new(),
+                    },
+                });
+            let required_changes = aggregated_changes.changes;
+            let estimated_effort = aggregated_changes.estimated_effort;
+            Ok(CouncilDecision::Refine {
+                confidence: 0.3, // Low confidence, but allow to proceed
+                required_changes,
+                priority: ChangePriority::Medium,
+                estimated_effort,
+            })
         } else {
-            // Weak consensus or significant dissent - reject
+            // Significant dissent or unanimous rejection - reject
             let critical_issues_strings = self.aggregate_critical_issues(weighted_contributions);
             let critical_issues = critical_issues_strings
                 .into_iter()

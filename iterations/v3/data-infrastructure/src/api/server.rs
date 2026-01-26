@@ -289,10 +289,10 @@ impl Orchestrator {
         description: &str,
         execution_mode: String,
     ) -> Result<ExecutionArtifacts> {
-        // Execute task using orchestrator service
+        // Execute task using orchestrator service (default to Tier 2 for API calls)
         let task_id = self
             .service
-            .execute_task(description.to_string(), Some(execution_mode), None)
+            .execute_task(description.to_string(), Some(execution_mode), None, Some(2))
             .await
             .map_err(|e| ApiError::ExecutionError(format!("Task execution failed: {}", e)))?;
 

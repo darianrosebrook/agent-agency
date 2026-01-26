@@ -297,6 +297,7 @@ impl Judge for SecurityJudge {
             risk_tier: 2, // Default to medium risk
             previous_reviews: vec![],
             constraints: std::collections::HashMap::new(),
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         self.review_spec(&context).await

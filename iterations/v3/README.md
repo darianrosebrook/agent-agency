@@ -223,11 +223,7 @@ iterations/v3/
 
 ## Getting Started
 
-### Prerequisites
-
-- **Rust 1.75+** with Cargo
-- **PostgreSQL 14+** with pgvector extension
-- **Docker** (optional, for containerized deployment)
+For complete setup instructions, see the **[Getting Started Guide](./docs/GETTING_STARTED.md)**.
 
 ### Quick Start
 
@@ -235,42 +231,44 @@ iterations/v3/
 # Navigate to the project
 cd iterations/v3
 
-# Build the workspace
-cargo build
+# Build the workspace (works without database using SQLx offline mode)
+SQLX_OFFLINE=true cargo build --workspace
 
 # Run tests
-cargo test
-
-# Run a specific crate
-cargo run --package data-interfaces
+SQLX_OFFLINE=true cargo test --workspace
 ```
 
 ### Database Setup
 
-The system requires PostgreSQL with vector extensions:
+The system requires PostgreSQL with pgvector. Choose one option:
 
+**Option A: Docker (recommended for new developers)**
 ```bash
-# Start PostgreSQL with pgvector
-docker run -d \
-  --name agent-agency-db \
-  -e POSTGRES_DB=agent_agency \
-  -e POSTGRES_USER=agent_agency \
-  -e POSTGRES_PASSWORD=secure_password \
-  -p 5432:5432 \
-  pgvector/pgvector:pg15
-
-# Enable extensions
-docker exec -it agent-agency-db psql -U agent_agency -d agent_agency -c "CREATE EXTENSION IF NOT EXISTS pgvector;"
-docker exec -it agent-agency-db psql -U agent_agency -d agent_agency -c "CREATE EXTENSION IF NOT EXISTS uuid_ossp;"
+docker-compose -f testing-validation/docker-compose.test.yml up -d
+DB_PORT=5433 DB_USER=test_user DB_NAME=agent_agency_test \
+  PGPASSWORD=test_password ./scripts/init_fresh_database.sh
 ```
 
-### Configuration
+**Option B: Local PostgreSQL (macOS)**
+```bash
+brew install postgresql@17 pgvector
+brew services start postgresql@17
+./scripts/setup_fresh_db.sh
+./scripts/init_fresh_database.sh
+```
 
-Set environment variables or create a `.env` file:
+### Running the API Server
 
 ```bash
-DATABASE_URL=postgresql://agent_agency:secure_password@localhost:5432/agent_agency
+# From repository root (handles PostgreSQL startup automatically)
+./start-api-server.sh
+
+# Or manually from iterations/v3
+export DATABASE_URL="postgresql://agent_agency:agent_agency_dev@127.0.0.1:5432/agent_agency"
+cargo run --bin agent-agency-api-server -- --host 127.0.0.1 --port 8080
 ```
+
+See the [Getting Started Guide](./docs/GETTING_STARTED.md) for detailed instructions, troubleshooting, and SQLx offline mode documentation.
 
 ## Development Workflow
 

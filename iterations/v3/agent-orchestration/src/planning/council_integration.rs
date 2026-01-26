@@ -112,6 +112,7 @@ impl CouncilIntegration for CouncilIntegrationImpl {
             risk_tier: working_spec.risk_tier as u8,
             previous_reviews: vec![],
             constraints,
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         // Conduct council review
@@ -252,6 +253,7 @@ impl CouncilIntegration for CouncilIntegrationImpl {
             risk_tier: working_spec.risk_tier as u8,
             previous_reviews: vec![],
             constraints: std::collections::HashMap::new(),
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         // Conduct council review

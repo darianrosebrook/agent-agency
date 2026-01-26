@@ -1,16 +1,25 @@
 version: "3.8"
 
+# Docker test environment for Agent Agency V3
+# 
+# Connection string for this environment:
+#   DATABASE_URL="postgresql://test_user:test_password@localhost:5433/agent_agency_test"
+#
+# To initialize the database after starting:
+#   DB_PORT=5433 DB_USER=test_user DB_NAME=agent_agency_test PGPASSWORD=test_password \
+#     ./scripts/init_fresh_database.sh
+
 services:
   # PostgreSQL database for persistence testing
   postgres:
     image: pgvector/pgvector:pg15
     container_name: agent_agency_test_postgres
     environment:
-      POSTGRES_DB: test_db
+      POSTGRES_DB: agent_agency_test
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
     ports:
-      - "5433:5432" # Use different port to avoid conflicts
+      - "5433:5432" # Use different port to avoid conflicts with local PostgreSQL
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./test-init.sql:/docker-entrypoint-initdb.d/init.sql

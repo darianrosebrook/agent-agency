@@ -104,7 +104,7 @@ struct Args {
     host: String,
 
     /// Server port
-    #[arg(long, default_value = "8080")]
+    #[arg(long, default_value = "8889")]
     port: u16,
 
     /// Enable CORS
@@ -299,13 +299,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Create database operations adapter if database client is available
         use agent_orchestration::orchestration::UnifiedOrchestratorFactory;
-        use agent_orchestration::planning::DatabaseOperations;
+        use agent_orchestration::planning::{DatabaseOperations, DatabaseOperationsBridge};
+        use agent_agency_contracts::ports::DatabaseOperationsPort;
 
         let db_ops: Option<Arc<dyn DatabaseOperations>> = if let Some(db) = db_client.as_ref() {
-            // Use DatabaseOperationsAdapter from this crate
-            Some(Arc::new(
-                data_interfaces_adapters::DatabaseOperationsAdapter::new(db.clone()),
-            ))
+            // Create port adapter and wrap with bridge
+            let port_adapter = Arc::new(
+                data_interfaces_adapters::DatabaseOperationsPortAdapter::new(
+                    Arc::new(data_interfaces_adapters::DatabaseOperationsAdapter::new(db.clone()))
+                )
+            );
+            Some(Arc::new(DatabaseOperationsBridge::new(port_adapter)))
         } else {
             None
         };
@@ -592,21 +596,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Create the main router with all API endpoints
 fn create_router(app_state: AppState, enable_cors: bool) -> Router {
+    info!("Creating router with all API endpoints...");
     let mut router = Router::new()
         // Health and status
         .route("/health", get(health_handler))
         .route("/api/v1/health", get(health_handler))
         .route("/metrics", get(get_metrics_handler))
         .route("/", get(root_handler));
-
-    // OpenAPI documentation endpoints
-    #[cfg(feature = "orchestration")]
-    {
-        // SwaggerUi already includes the /api-docs/openapi.json route, so we don't need to register it separately
-        router = router.merge(create_swagger_ui());
-    }
+    info!("Base routes registered: /health, /api/v1/health, /metrics, /");
 
     // Task management endpoints
+    info!("Registering task management endpoints...");
     router = router
         .route("/api/v1/tasks", post(submit_task_handler))
         .route("/api/v1/tasks", get(list_tasks_handler))
@@ -895,7 +895,11 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
     router = router
         .route("/api/v1/system/health", get(get_system_health_handler))
         .route("/api/v1/system/resources", get(get_resource_usage_handler))
-        .route("/api/v1/system/metrics", get(get_resource_usage_handler));
+        .route("/api/v1/system/metrics", get(get_resource_usage_handler))
+        .route(
+            "/api/v1/system/orchestrator-status",
+            get(get_orchestrator_status_handler),
+        );
 
     // Analytics endpoints
     router = router
@@ -1159,18 +1163,28 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .layer(NormalizePathLayer::trim_trailing_slash())
         .layer(cors);
 
+    // OpenAPI documentation endpoints - TEMPORARILY DISABLED FOR DEBUGGING
+    // #[cfg(feature = "orchestration")]
+    // {
+    //     // SwaggerUi already includes the /api-docs/openapi.json route, so we don't need to register it separately
+    //     router = router.merge(create_swagger_ui());
+    // }
+
+    info!("Router construction complete, applying state...");
     router.with_state(app_state)
 }
 
 /// Check embedding service availability before starting a task
+/// Uses /api/tags endpoint which is a valid Ollama endpoint that confirms service is running
 async fn verify_embedding_service_ready() -> Result<(), StatusCode> {
     let embedding_url =
         env::var("EMBEDDING_SERVICE_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
-    let health_url = format!("{}/health", embedding_url.trim_end_matches('/'));
+    // Use /api/tags instead of /health since Ollama doesn't have a /health endpoint
+    let check_url = format!("{}/api/tags", embedding_url.trim_end_matches('/'));
 
     let client = Client::new();
     let result = client
-        .get(health_url)
+        .get(check_url)
         .timeout(std::time::Duration::from_secs(5))
         .send()
         .await;
@@ -1520,9 +1534,9 @@ async fn submit_task_handler(
 
     #[cfg(feature = "orchestration")]
     {
-        // Use UnifiedOrchestratorAdapter if available
-        // CRITICAL: Do not fallback to legacy API - fail if UnifiedOrchestrator is not available
-        if let Some(unified_orchestrator) = &state.unified_orchestrator {
+        // Route through OrchestratorService to ensure tasks are tracked in active_tasks
+        // This enables observability endpoints (chain-of-thought, council-decisions, worker-actions)
+        if let Some(service) = &state.orchestrator_service {
             // Extract task data
             let description = payload
                 .get("description")
@@ -1534,387 +1548,109 @@ async fn submit_task_handler(
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
 
-            // Create task submission request
-            use data_infrastructure::api::types::TaskSubmissionRequest;
-            let request = TaskSubmissionRequest {
-                description: description.to_string(),
-                execution_mode,
-                risk_tier: payload
-                    .get("risk_tier")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string()),
-                context: payload
-                    .get("context")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string()),
-                priority: payload
-                    .get("priority")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string()),
-                deadline: None,
-            };
+            let context = payload
+                .get("context")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
 
-            // Convert to WorkingSpec
-            use data_interfaces_adapters::working_spec_converter::convert_task_request_to_working_spec;
-            let working_spec = match convert_task_request_to_working_spec(request) {
-                Ok(spec) => spec,
-                Err(e) => {
-                    error!("Failed to convert task request to WorkingSpec: {}", e);
-                    return Err(StatusCode::BAD_REQUEST);
-                }
-            };
+            // Parse risk_tier from payload (default to Tier 3 for simple tasks)
+            let risk_tier: u8 = payload
+                .get("risk_tier")
+                .and_then(|v| v.as_str().or_else(|| v.as_i64().map(|_| "")))
+                .map(|s| s.parse::<u8>().unwrap_or(3))
+                .or_else(|| payload.get("risk_tier").and_then(|v| v.as_i64()).map(|i| i as u8))
+                .unwrap_or(3);
 
-            // Create TaskContext (convert from RequestTaskContext to ContractsTaskContext)
-            use agent_agency_contracts::task_request::{
-                Environment, TaskContext as RequestTaskContext,
-            };
-            use agent_agency_contracts::TaskContext as ContractsTaskContext;
-            use chrono::Utc;
-
+            // Get workspace root for estimation
             let workspace_root = std::env::current_dir()
                 .ok()
                 .and_then(|p| p.to_str().map(|s| s.to_string()))
                 .unwrap_or_else(|| ".".to_string());
 
-            let request_context = RequestTaskContext {
-                workspace_root: workspace_root.clone(),
-                git_branch: detect_git_branch(&workspace_root)
-                    .unwrap_or_else(|| "main".to_string()),
-                recent_changes: vec![],
-                dependencies: std::collections::HashMap::new(),
-                environment: Environment::Development,
-            };
-
-            // Convert to ContractsTaskContext
-            let task_context = ContractsTaskContext {
-                task_id: Uuid::new_v4(),   // Generate new task ID
-                worker_id: Uuid::new_v4(), // Generate worker ID
-                start_time: Utc::now(),
-                timeout_ms: 300_000, // 5 minutes default
-                retry_count: 0,
-                max_retries: 3,
-                metadata: {
-                    let mut meta = std::collections::HashMap::new();
-                    meta.insert(
-                        "workspace_root".to_string(),
-                        serde_json::Value::String(request_context.workspace_root.clone()),
-                    );
-                    meta.insert(
-                        "git_branch".to_string(),
-                        serde_json::Value::String(request_context.git_branch),
-                    );
-                    meta.insert(
-                        "environment".to_string(),
-                        serde_json::Value::String(format!("{:?}", request_context.environment)),
-                    );
-                    meta
-                },
-            };
-
-            // Clone workspace_root for use after task_context is moved
-            let workspace_root = request_context.workspace_root.clone();
-
-            // Generate task_id from working spec ID
-            let task_id = if working_spec.id.starts_with("TASK-") {
-                working_spec
-                    .id
-                    .strip_prefix("TASK-")
-                    .and_then(|s| Uuid::parse_str(s).ok())
-                    .unwrap_or_else(|| Uuid::new_v4())
-            } else {
-                Uuid::new_v4()
-            };
-
-            // Insert task into database before spawning execution
-            // This is required because task_execution_states has a foreign key to tasks
-            if let Some(db) = &state.db_client {
-                let now = Utc::now();
-                let risk_tier_str = payload
-                    .get("risk_tier")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("3");
-                let priority_str = payload
-                    .get("priority")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("normal");
-                let priority_int: i32 = match priority_str {
-                    "critical" => 1,
-                    "high" => 2,
-                    "normal" => 5,
-                    "low" => 8,
-                    _ => 5,
-                };
-
-                if let Err(e) = sqlx::query(
-                    r#"
-                    INSERT INTO tasks (id, title, description, risk_tier, priority, status, created_at, updated_at)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                    ON CONFLICT (id) DO NOTHING
-                    "#,
-                )
-                .bind(task_id)
-                .bind(&working_spec.title)
-                .bind(&working_spec.description)
-                .bind(risk_tier_str)
-                .bind(priority_int)
-                .bind("pending")
-                .bind(now)
-                .bind(now)
-                .execute(db.pool())
-                .await
-                {
-                    warn!("Failed to insert task into database: {}. Task execution will continue but state tracking may fail.", e);
-                } else {
-                    debug!("Task {} inserted into database", task_id);
-                }
-            }
-
-            // Pre-flight health check before spawning task execution
-            info!("Performing pre-flight health check for task {}", task_id);
+            // Execute task through OrchestratorService
+            // This ensures the task is tracked in active_tasks and observability endpoints work
+            info!("Submitting task via OrchestratorService: {} (risk_tier={})", description.chars().take(50).collect::<String>(), risk_tier);
             
-            // Check database connectivity
-            if let Some(ref db) = state.db_client {
-                if let Err(e) = sqlx::query("SELECT 1")
-                    .execute(db.pool())
-                    .await
-                {
-                    error!("Pre-flight check failed: Database not available - {}", e);
-                    return Err(StatusCode::SERVICE_UNAVAILABLE);
-                }
-                debug!("Pre-flight check: Database connectivity OK");
-            } else {
-                warn!("Pre-flight check: Database client not available (task will continue but state tracking may fail)");
-            }
-            
-            // Check orchestrator is ready (orchestrator exists and is accessible)
-            // The fact that we got here means unified_orchestrator is Some, so it's ready
-            debug!("Pre-flight check: UnifiedOrchestrator ready (adapter exists)");
-            
-            info!("Pre-flight health check passed for task {}", task_id);
+            match service.execute_task(description.to_string(), execution_mode, context, Some(risk_tier)).await {
+                Ok(task_id) => {
+                    info!("Task {} submitted successfully via OrchestratorService", task_id);
+                    
+                    // Also insert into database for compatibility with stats/list endpoints
+                    if let Some(db) = &state.db_client {
+                        let now = Utc::now();
+                        let risk_tier_str = payload
+                            .get("risk_tier")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("3");
+                        let priority_str = payload
+                            .get("priority")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("normal");
+                        let priority_int: i32 = match priority_str {
+                            "critical" => 1,
+                            "high" => 2,
+                            "normal" => 5,
+                            "low" => 8,
+                            _ => 5,
+                        };
 
-            // Spawn task execution in background to avoid blocking the HTTP request
-            let orchestrator_clone = unified_orchestrator.clone();
-            let spec_clone = working_spec.clone();
-            let context_clone = task_context.clone();
-            let task_id_for_log = task_id;
-            let telemetry = state.telemetry_service.clone();
-            let worker_id = task_context.worker_id;
-            let db_client_for_task = state.db_client.clone();
-
-            info!("Spawning background task execution for task {}", task_id_for_log);
-            
-            // Update task status to in_progress before spawning
-            if let Some(ref db) = state.db_client {
-                if let Err(e) = sqlx::query(
-                    r#"
-                    UPDATE tasks 
-                    SET status = 'in_progress', updated_at = NOW()
-                    WHERE id = $1
-                    "#,
-                )
-                .bind(task_id)
-                .execute(db.pool())
-                .await
-                {
-                    warn!("Failed to update task {} status to in_progress: {}", task_id_for_log, e);
-                } else {
-                    info!("Task {} status updated to in_progress", task_id_for_log);
-                }
-            }
-
-            // Spawn task execution with comprehensive error and panic handling
-            let spawn_handle = tokio::spawn(async move {
-                info!("Starting background execution of task {}", task_id_for_log);
-                let start_time = std::time::Instant::now();
-
-                // Record task started activity
-                let _ = telemetry
-                    .record_agent_activity(
-                        worker_id,
-                        data_infrastructure::telemetry_service::activity_types::TASK_STARTED,
-                        Some(task_id_for_log),
-                        None,
-                        true,
-                        None,
-                    )
-                    .await;
-
-                // Log execution phase: planning
-                info!("Task {} entering planning phase", task_id_for_log);
-
-                match orchestrator_clone
-                    .orchestrate_task(spec_clone, context_clone)
-                    .await
-                {
-                    Ok(result) => {
-                        let duration_ms = start_time.elapsed().as_millis() as i32;
-                        info!(
-                            "Task {} completed successfully: {} ({}ms)",
-                            task_id_for_log, result.success, duration_ms
-                        );
-
-                        // Update task status to completed with progress
-                        if let Some(ref db) = db_client_for_task {
-                            let status = if result.success { "completed" } else { "failed" };
-                            if let Err(e) = sqlx::query(
-                                r#"
-                                UPDATE tasks 
-                                SET status = $1, updated_at = NOW()
-                                WHERE id = $2
-                                "#,
-                            )
-                            .bind(status)
-                            .bind(task_id_for_log)
-                            .execute(db.pool())
-                            .await
-                            {
-                                warn!("Failed to update task {} status to {}: {}", task_id_for_log, status, e);
-                            } else {
-                                info!("Task {} status updated to {} (100% complete)", task_id_for_log, status);
-                            }
-
-                            // Also persist execution state for API status visibility
-                            upsert_task_execution_state(db, task_id_for_log, status, None).await;
-                        }
-
-                        // Record task completed activity
-                        let _ = telemetry
-                            .record_agent_activity(
-                                worker_id,
-                                data_infrastructure::telemetry_service::activity_types::TASK_COMPLETED,
-                                Some(task_id_for_log),
-                                Some(duration_ms),
-                                result.success,
-                                None,
-                            )
-                            .await;
-                    }
-                    Err(e) => {
-                        let duration_ms = start_time.elapsed().as_millis() as i32;
-                        error!(
-                            "Task {} execution failed: {:?} ({}ms)",
-                            task_id_for_log, e, duration_ms
-                        );
-
-                        // Update task status to failed with error message
-                        if let Some(ref db) = db_client_for_task {
-                            let error_msg = format!("{:?}", e);
-                            if let Err(update_err) = sqlx::query(
-                                r#"
-                                UPDATE tasks 
-                                SET status = 'failed', updated_at = NOW()
-                                WHERE id = $1
-                                "#,
-                            )
-                            .bind(task_id_for_log)
-                            .execute(db.pool())
-                            .await
-                            {
-                                warn!("Failed to update task {} status to failed: {}", task_id_for_log, update_err);
-                            } else {
-                                info!("Task {} status updated to failed", task_id_for_log);
-                            }
-
-                            // Persist failure to execution state table so status API reflects it
-                            upsert_task_execution_state(
-                                db,
-                                task_id_for_log,
-                                "failed",
-                                Some(&error_msg),
-                            )
-                            .await;
-                        }
-
-                        // Record task failed activity
-                        let _ = telemetry
-                            .record_agent_activity(
-                                worker_id,
-                                data_infrastructure::telemetry_service::activity_types::TASK_FAILED,
-                                Some(task_id_for_log),
-                                Some(duration_ms),
-                                false,
-                                Some(&format!("{:?}", e)),
-                            )
-                            .await;
-                    }
-                }
-
-                // Also trigger a snapshot check periodically
-                let _ = telemetry.maybe_snapshot_task_stats().await;
-            });
-
-            // Log that spawn completed (handle is available for monitoring if needed)
-            info!("Background task spawn completed for task {} (handle available for monitoring)", task_id_for_log);
-            
-            // Monitor spawn handle in background to detect panics or immediate failures
-            let handle_for_monitoring = spawn_handle;
-            let task_id_monitor = task_id_for_log;
-            let db_for_monitoring = state.db_client.clone();
-            tokio::spawn(async move {
-                // Wait a short time to see if spawn succeeds
-                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                
-                // Check if task panicked or failed immediately
-                if handle_for_monitoring.is_finished() {
-                    match handle_for_monitoring.await {
-                        Ok(_) => {
-                            debug!("Task {} spawn handle completed normally", task_id_monitor);
-                        }
-                        Err(e) => {
-                            error!("Task {} spawn handle PANICKED: {:?}", task_id_monitor, e);
-                            // Update task status to failed
-                            if let Some(ref db) = db_for_monitoring {
-                                let _ = sqlx::query(
-                                    r#"
-                                    UPDATE tasks 
-                                    SET status = 'failed', updated_at = NOW()
-                                    WHERE id = $1
-                                    "#,
-                                )
-                                .bind(task_id_monitor)
-                                .execute(db.pool())
-                                .await;
-                            }
+                        if let Err(e) = sqlx::query(
+                            r#"
+                            INSERT INTO tasks (id, title, description, risk_tier, priority, status, created_at, updated_at)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            ON CONFLICT (id) DO UPDATE SET
+                                status = EXCLUDED.status,
+                                updated_at = EXCLUDED.updated_at
+                            "#,
+                        )
+                        .bind(task_id)
+                        .bind(description.chars().take(100).collect::<String>())
+                        .bind(description)
+                        .bind(risk_tier_str)
+                        .bind(priority_int)
+                        .bind("pending")
+                        .bind(now)
+                        .bind(now)
+                        .execute(db.pool())
+                        .await
+                        {
+                            warn!("Failed to insert task into database: {}. Task execution continues.", e);
+                        } else {
+                            debug!("Task {} inserted into database", task_id);
                         }
                     }
-                } else {
-                    debug!("Task {} spawn handle is running", task_id_monitor);
-                }
-            });
-            
-            // Note: We intentionally don't await the spawn_handle here to avoid blocking the HTTP response
-            // The handle will be cleaned up when it goes out of scope, but the task continues running
 
-            // Return task submission response immediately
-            use data_infrastructure::api::types::TaskSubmissionResponse;
-            let response = TaskSubmissionResponse {
-                task_id,
-                status: "accepted".to_string(),
-                message: "Task submitted successfully and is executing in background".to_string(),
-                estimated_completion: estimate_completion_from_spec(&workspace_root)
-                    .map(|seconds| Utc::now() + ChronoDuration::seconds(seconds)),
-            };
-            Ok(Json(serde_json::json!(response)))
+                    // Return task submission response
+                    use data_infrastructure::api::types::TaskSubmissionResponse;
+                    let response = TaskSubmissionResponse {
+                        task_id,
+                        status: "accepted".to_string(),
+                        message: "Task submitted successfully and is executing in background".to_string(),
+                        estimated_completion: estimate_completion_from_spec(&workspace_root)
+                            .map(|seconds| Utc::now() + ChronoDuration::seconds(seconds)),
+                    };
+                    return Ok(Json(serde_json::json!(response)));
+                }
+                Err(e) => {
+                    error!("Task submission via OrchestratorService failed: {:?}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            }
         } else {
-            // UnifiedOrchestrator is not available - this is a critical error
-            // Do NOT fallback to legacy API that silently completes tasks
-            error!("CRITICAL: UnifiedOrchestrator not initialized - task execution will fail");
-            error!("   UnifiedOrchestrator initialization failed during server startup");
+            // Neither OrchestratorService nor UnifiedOrchestrator is available
+            error!("CRITICAL: No orchestration service available");
+            error!("   OrchestratorService and UnifiedOrchestrator both not initialized");
             error!("   Check server logs for initialization errors (likely database schema issue)");
-            error!("   Tasks cannot be executed without UnifiedOrchestrator");
+            error!("   Tasks cannot be executed without orchestration services");
 
             // Return detailed error response
             let error_response = serde_json::json!({
-                "error": "UnifiedOrchestrator not available",
-                "message": "Task execution is disabled because UnifiedOrchestrator failed to initialize. Check server logs for initialization errors.",
+                "error": "Orchestration services not available",
+                "message": "Task execution is disabled because orchestration services failed to initialize. Check server logs for initialization errors.",
                 "details": "This usually indicates a database schema issue (e.g., missing 'description' column in planning_audit_events table). Run migrations to fix.",
                 "status": "service_unavailable"
             });
 
-            // Return error response with proper status code
-            // Note: Function signature returns Result<Json<JsonValue>, StatusCode>
-            // We return the error JSON with 200 status, but include error details in JSON
-            // The client should check the "status" field in the response
             Ok(Json(error_response))
         }
     }
@@ -1996,7 +1732,40 @@ async fn get_task_status_handler(
 
     #[cfg(feature = "orchestration")]
     {
-        // Read task status from database
+        // First, check orchestrator service for in-memory task state (most accurate for active tasks)
+        // This ensures we get the correct status even if database hasn't been updated yet
+        if let Some(service) = &state.orchestrator_service {
+            if let Ok(Some(task_state)) = service.get_task_status(task_uuid).await {
+                use data_infrastructure::api::types::TaskStatusResponse;
+                use data_infrastructure::orchestrator_service::TaskStatus;
+                
+                // Convert TaskStatus enum to string and calculate progress
+                let (status_str, progress) = match task_state.status {
+                    TaskStatus::Pending => ("pending".to_string(), 0.0),
+                    TaskStatus::Planning => ("planning".to_string(), 10.0),
+                    TaskStatus::Executing => ("running".to_string(), 50.0),
+                    TaskStatus::QualityCheck => ("quality_check".to_string(), 80.0),
+                    TaskStatus::Refining => ("refining".to_string(), 90.0),
+                    TaskStatus::Completed => ("completed".to_string(), 100.0),
+                    TaskStatus::Failed => ("failed".to_string(), 0.0),
+                    TaskStatus::Cancelled => ("cancelled".to_string(), 0.0),
+                    TaskStatus::Paused => ("paused".to_string(), (task_state.chain_of_thought.len() as f64 * 10.0).min(90.0)),
+                };
+                
+                let response = TaskStatusResponse {
+                    task_id: task_uuid,
+                    status: status_str,
+                    progress_percentage: progress as f32,
+                    current_phase: None,
+                    started_at: Some(task_state.started_at),
+                    updated_at: Some(task_state.updated_at),
+                    quality_score: None,
+                };
+                return Ok(Json(serde_json::json!(response)));
+            }
+        }
+        
+        // Fallback to database for tasks not in memory (historical tasks)
         if let Some(db) = &state.db_client {
             // Try to get execution state first (more detailed)
             let exec_state_result: Result<Option<(String, chrono::DateTime<Utc>, f64)>, _> = sqlx::query_as(
@@ -2995,12 +2764,88 @@ async fn get_agent_health_handler(
     let agent_uuid = Uuid::parse_str(&agent_id).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     match db.get_worker(agent_uuid).await {
-        Ok(Some(worker)) => Ok(Json(serde_json::json!({
-            "agent_id": agent_id,
-            "status": if worker.is_active { "healthy" } else { "inactive" },
-            "is_active": worker.is_active,
-            "last_updated": worker.updated_at.to_rfc3339(),
-        }))),
+        Ok(Some(worker)) => {
+            // Calculate uptime from created_at (time since worker was created)
+            let now = Utc::now();
+            let uptime_seconds = (now - worker.created_at).num_seconds().max(0) as u64;
+            
+            // Get error count from task executions
+            let error_count = sqlx::query_scalar::<_, i64>(
+                r#"
+                SELECT COUNT(*) 
+                FROM task_executions 
+                WHERE worker_id = $1 
+                  AND (status = 'failed' OR error_message IS NOT NULL)
+                "#
+            )
+            .bind(agent_uuid)
+            .fetch_one(db.pool())
+            .await
+            .unwrap_or(0);
+
+            // Get total task count for health score calculation
+            let total_tasks = sqlx::query_scalar::<_, i64>(
+                r#"
+                SELECT COUNT(*) 
+                FROM task_executions 
+                WHERE worker_id = $1
+                "#
+            )
+            .bind(agent_uuid)
+            .fetch_one(db.pool())
+            .await
+            .unwrap_or(0);
+
+            // Calculate health score (0-100) based on success rate
+            let health_score = if total_tasks > 0 {
+                let success_count = total_tasks - error_count;
+                ((success_count as f64 / total_tasks as f64) * 100.0).round() as i32
+            } else {
+                100 // No tasks = perfect health
+            };
+
+            // Determine status based on is_active and error rate
+            let status = if !worker.is_active {
+                "offline"
+            } else if error_count > 10 || health_score < 50 {
+                "critical"
+            } else if error_count > 5 || health_score < 75 {
+                "warning"
+            } else {
+                "healthy"
+            };
+
+            // Get average response time from recent task executions
+            // Use execution_time_ms if available, otherwise calculate from timestamps
+            let avg_response_time = sqlx::query_scalar::<_, Option<f64>>(
+                r#"
+                SELECT COALESCE(
+                    AVG(execution_time_ms),
+                    AVG(EXTRACT(EPOCH FROM (execution_completed_at - execution_started_at)) * 1000)
+                )
+                FROM task_executions 
+                WHERE worker_id = $1 
+                  AND execution_completed_at IS NOT NULL
+                  AND execution_started_at IS NOT NULL
+                  AND execution_completed_at > NOW() - INTERVAL '24 hours'
+                "#
+            )
+            .bind(agent_uuid)
+            .fetch_one(db.pool())
+            .await
+            .unwrap_or(None)
+            .unwrap_or(0.0) as i64;
+
+            Ok(Json(serde_json::json!({
+                "agent_id": agent_id,
+                "status": status,
+                "uptime_seconds": uptime_seconds,
+                "last_seen": worker.updated_at.to_rfc3339(),
+                "error_count": error_count,
+                "response_time_ms": avg_response_time,
+                "health_score": health_score,
+            })))
+        }
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(e) => {
             error!("Failed to get worker health: {}", e);
@@ -3021,11 +2866,87 @@ async fn get_agent_metrics_handler(
     let agent_uuid = Uuid::parse_str(&agent_id).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     match db.get_worker(agent_uuid).await {
-        Ok(Some(worker)) => Ok(Json(serde_json::json!({
-            "agent_id": agent_id,
-            "performance_history": worker.performance_history,
-            "capabilities": worker.capabilities,
-        }))),
+        Ok(Some(worker)) => {
+            // Get metrics from task executions in the last 24 hours
+            let metrics_query = r#"
+                SELECT 
+                    COUNT(*) as total_requests,
+                    COUNT(*) FILTER (WHERE status = 'failed' OR error_message IS NOT NULL) as failed_count,
+                    AVG(COALESCE(execution_time_ms, 
+                        EXTRACT(EPOCH FROM (execution_completed_at - execution_started_at)) * 1000
+                    )) FILTER (WHERE execution_completed_at IS NOT NULL) as avg_response_time,
+                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY 
+                        COALESCE(execution_time_ms,
+                            EXTRACT(EPOCH FROM (execution_completed_at - execution_started_at)) * 1000
+                        )
+                    ) FILTER (WHERE execution_completed_at IS NOT NULL) as p50_response_time,
+                    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY 
+                        COALESCE(execution_time_ms,
+                            EXTRACT(EPOCH FROM (execution_completed_at - execution_started_at)) * 1000
+                        )
+                    ) FILTER (WHERE execution_completed_at IS NOT NULL) as p95_response_time,
+                    PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY 
+                        COALESCE(execution_time_ms,
+                            EXTRACT(EPOCH FROM (execution_completed_at - execution_started_at)) * 1000
+                        )
+                    ) FILTER (WHERE execution_completed_at IS NOT NULL) as p99_response_time
+                FROM task_executions 
+                WHERE worker_id = $1 
+                  AND execution_started_at > NOW() - INTERVAL '24 hours'
+            "#;
+
+            let metrics_row = sqlx::query(metrics_query)
+                .bind(agent_uuid)
+                .fetch_one(db.pool())
+                .await;
+
+            let (total_requests, failed_count, avg_response_time, p50, p95, p99) = match metrics_row {
+                Ok(row) => (
+                    row.try_get::<i64, _>("total_requests").unwrap_or(0),
+                    row.try_get::<i64, _>("failed_count").unwrap_or(0),
+                    row.try_get::<Option<f64>, _>("avg_response_time").unwrap_or(None).unwrap_or(0.0),
+                    row.try_get::<Option<f64>, _>("p50_response_time").unwrap_or(None).unwrap_or(0.0),
+                    row.try_get::<Option<f64>, _>("p95_response_time").unwrap_or(None).unwrap_or(0.0),
+                    row.try_get::<Option<f64>, _>("p99_response_time").unwrap_or(None).unwrap_or(0.0),
+                ),
+                Err(_) => (0, 0, 0.0, 0.0, 0.0, 0.0),
+            };
+
+            let requests_per_second = if total_requests > 0 {
+                total_requests as f64 / 86400.0 // requests per second over 24 hours
+            } else {
+                0.0
+            };
+
+            let error_rate = if total_requests > 0 {
+                failed_count as f64 / total_requests as f64
+            } else {
+                0.0
+            };
+
+            // Try to extract CPU/memory from performance_history if available
+            let performance_history: serde_json::Value = worker.performance_history;
+            let cpu_usage = performance_history
+                .get("cpu_usage_percent")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            let memory_usage_mb = performance_history
+                .get("memory_usage_mb")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+
+            Ok(Json(serde_json::json!({
+                "agent_id": agent_id,
+                "cpu_usage_percent": cpu_usage,
+                "memory_usage_mb": memory_usage_mb,
+                "response_time_p50_ms": p50.round() as i64,
+                "response_time_p95_ms": p95.round() as i64,
+                "response_time_p99_ms": p99.round() as i64,
+                "requests_per_second": requests_per_second,
+                "error_rate": error_rate,
+                "timestamp": Utc::now().to_rfc3339(),
+            })))
+        }
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(e) => {
             error!("Failed to get worker metrics: {}", e);
@@ -6211,6 +6132,7 @@ async fn restore_project_overview_version_handler(
         title: None,
         overview: Some(overview.clone()),
         state: None,
+        workspace_id: None,
         milestones: None,
         dependency_graph: None,
         change_budget: None,
@@ -6271,17 +6193,17 @@ async fn scaffold_project_handler(
                 let generated_id = uuid::Uuid::new_v4().to_string();
 
                 // Register workspace in registry (idempotent on path)
-                if let Err(e) = sqlx::query!(
+                if let Err(e) = sqlx::query(
                     r#"
                     INSERT INTO workspace_registry (workspace_id, name, path, access)
                     VALUES ($1, $2, $3, 'enabled')
                     ON CONFLICT (workspace_id) DO NOTHING
                     "#,
-                    generated_id,
-                    workspace_name,
-                    path_value
                 )
-                .execute(&db.pool)
+                .bind(generated_id.clone())
+                .bind(workspace_name.clone())
+                .bind(path_value.clone())
+                .execute(db.pool())
                 .await
                 {
                     error!("Failed to register workspace: {}", e);
@@ -6311,7 +6233,7 @@ async fn scaffold_project_handler(
             );
 
             match service
-                .execute_task(scaffold_description, Some("auto".to_string()), None)
+                .execute_task(scaffold_description, Some("auto".to_string()), None, Some(2))
                 .await
             {
                 Ok(task_id) => Ok(Json(serde_json::json!({
@@ -6358,22 +6280,24 @@ async fn list_projects_handler(
                 if workspace_ids.is_empty() {
                     std::collections::HashMap::new()
                 } else {
-                    match sqlx::query!(
+                      match sqlx::query(
                         r#"
                         SELECT workspace_id, name, path
                         FROM workspace_registry
                         WHERE workspace_id = ANY($1)
                         "#,
-                        &workspace_ids
                     )
-                    .fetch_all(&db.pool)
+                    .bind(&workspace_ids)
+                    .fetch_all(db.pool())
                     .await
                     {
                         Ok(rows) => rows
                             .into_iter()
                             .filter_map(|row| {
-                                row.workspace_id
-                                    .map(|id| (id, (row.name.clone(), row.path.clone())))
+                                let workspace_id: Option<String> = row.try_get("workspace_id").ok();
+                                let name: String = row.try_get("name").unwrap_or_default();
+                                let path: String = row.try_get("path").unwrap_or_default();
+                                workspace_id.map(|id| (id, (name, path)))
                             })
                             .collect(),
                         Err(e) => {
@@ -6427,16 +6351,20 @@ async fn get_project_handler(
     match db.get_execution_plan(project_uuid).await {
         Ok(Some(plan)) => {
             let (workspace_name, workspace_path) = if let Some(ref wid) = plan.workspace_id {
-                match sqlx::query!(
+                  match sqlx::query(
                     r#"
                     SELECT name, path FROM workspace_registry WHERE workspace_id = $1
                     "#,
-                    wid
                 )
-                .fetch_optional(&db.pool)
+                .bind(wid)
+                .fetch_optional(db.pool())
                 .await
                 {
-                    Ok(Some(row)) => (Some(row.name), Some(row.path)),
+                    Ok(Some(row)) => {
+                        let name: String = row.try_get("name").unwrap_or_default();
+                        let path: String = row.try_get("path").unwrap_or_default();
+                        (Some(name), Some(path))
+                    },
                     Ok(None) => (None, None),
                     Err(e) => {
                         error!("Failed to load workspace for project {}: {}", project_id, e);
@@ -6542,6 +6470,7 @@ async fn update_project_handler(
             .get("state")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string()),
+        workspace_id: payload.get("workspace_id").and_then(|v| v.as_str()).map(|s| s.to_string()),
         milestones: payload.get("milestones").cloned(),
         dependency_graph: payload.get("dependency_graph").cloned(),
         change_budget: payload.get("change_budget").cloned(),
@@ -7536,6 +7465,84 @@ async fn get_resource_usage_handler(
         "network": network_usage_mb,
         "timestamp": chrono::Utc::now().to_rfc3339()
     })))
+}
+
+/// Get orchestrator service status for diagnostics
+///
+/// Returns detailed status information about the orchestration services,
+/// including whether the task executor is available and queue status.
+async fn get_orchestrator_status_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    #[cfg(feature = "orchestration")]
+    {
+        let mut status = serde_json::json!({
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "orchestrator_service": {
+                "available": state.orchestrator_service.is_some(),
+            },
+            "unified_orchestrator": {
+                "available": state.unified_orchestrator.is_some(),
+            },
+            "database": {
+                "available": state.db_client.is_some(),
+            },
+        });
+
+        // Get detailed orchestrator service status if available
+        if let Some(service) = &state.orchestrator_service {
+            let service_status = service.get_service_status().await;
+            status["orchestrator_service"] = serde_json::json!({
+                "available": true,
+                "has_executor": service_status.has_executor,
+                "active_task_count": service_status.active_task_count,
+                "pending_queue_size": service_status.pending_queue_size,
+                "max_queue_size": service_status.max_queue_size,
+            });
+        }
+
+        // Check database connectivity
+        if let Some(db) = &state.db_client {
+            let db_status = match sqlx::query("SELECT 1").execute(db.pool()).await {
+                Ok(_) => serde_json::json!({
+                    "available": true,
+                    "connected": true,
+                }),
+                Err(e) => serde_json::json!({
+                    "available": true,
+                    "connected": false,
+                    "error": e.to_string(),
+                }),
+            };
+            status["database"] = db_status;
+        }
+
+        // Overall health assessment
+        let orchestrator_ok = state.orchestrator_service.is_some() 
+            && state.orchestrator_service.as_ref().map_or(false, |s| s.has_executor());
+        let database_ok = state.db_client.is_some();
+        
+        status["overall_status"] = if orchestrator_ok && database_ok {
+            serde_json::json!("healthy")
+        } else if database_ok {
+            serde_json::json!("degraded - orchestrator executor not available")
+        } else {
+            serde_json::json!("unhealthy - database and/or orchestrator not available")
+        };
+
+        Ok(Json(status))
+    }
+
+    #[cfg(not(feature = "orchestration"))]
+    {
+        Ok(Json(serde_json::json!({
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "overall_status": "orchestration feature not enabled",
+            "orchestrator_service": { "available": false },
+            "unified_orchestrator": { "available": false },
+            "database": { "available": state.db_client.is_some() },
+        })))
+    }
 }
 
 // Analytics handlers (observational - aggregated from task states)

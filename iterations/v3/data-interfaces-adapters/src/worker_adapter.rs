@@ -349,7 +349,7 @@ impl WorkerService for WorkerServiceAdapter {
             .as_ref()
             .and_then(|m| m.get("endpoint_url"))
             .and_then(|u| u.as_str())
-            .unwrap_or("http://localhost:8080")
+            .unwrap_or("http://localhost:8889")
             .to_string();
 
         // Use sqlx query builder directly for parameterized queries

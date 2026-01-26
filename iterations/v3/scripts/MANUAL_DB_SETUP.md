@@ -1,5 +1,9 @@
 # Manual Database Setup Guide
 
+> **Note:** For a streamlined setup experience, see the **[Getting Started Guide](../docs/GETTING_STARTED.md)** which covers the standard setup path.
+>
+> This document provides manual steps for edge cases where automated scripts fail.
+
 Due to PostgreSQL authentication configuration issues, follow these steps manually:
 
 ## Step 1: Set Password for Your User

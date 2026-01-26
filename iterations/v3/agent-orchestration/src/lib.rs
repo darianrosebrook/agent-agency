@@ -160,6 +160,7 @@ mod test_utils {
             let db_plan = crate::planning::data_infrastructure_types::models::ExecutionPlan {
                 id: plan.id,
                 session_id: Uuid::new_v4(),
+                workspace_id: None,
                 working_spec_id: plan
                     .working_spec_id
                     .unwrap_or_else(|| format!("PLAN-{}", plan.id)),
@@ -902,6 +903,7 @@ impl AgentOrchestrationService {
             },
             previous_reviews: Vec::new(),
             constraints: std::collections::HashMap::new(),
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         // Perform full council review using conduct_review

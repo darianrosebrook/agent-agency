@@ -68,6 +68,7 @@ impl Default for ExecutionPlan {
             contract_plan: ContractExecutionPlan {
                 id: Uuid::new_v4(),
                 session_id: Uuid::new_v4(),
+                workspace_id: None,
                 working_spec_id: "default-spec".to_string(),
                 contract_plan: WorkingSpec {
                     version: "1.0".to_string(),
@@ -875,6 +876,7 @@ mod tests {
         let contract_plan = ContractExecutionPlan {
             id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
+            workspace_id: None,
             working_spec_id: "test-spec".to_string(),
             contract_plan: WorkingSpec {
                 version: "1.0".to_string(),

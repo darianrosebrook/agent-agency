@@ -156,6 +156,7 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
             risk_tier,
             previous_reviews: Vec::new(),
             constraints: std::collections::HashMap::new(),
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         // Create session record in database if database operations are available
@@ -238,6 +239,7 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
             risk_tier,
             previous_reviews: Vec::new(),
             constraints: std::collections::HashMap::new(),
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         // Update session status to review_in_progress if database operations available

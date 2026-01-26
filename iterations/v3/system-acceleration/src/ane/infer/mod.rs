@@ -2,18 +2,32 @@
 //!
 //! This module provides async inference execution with proper timeout handling,
 //! performance monitoring, and error recovery for Apple Neural Engine operations.
+//!
+//! ## Feature Flags
+//!
+//! - `whisper` - Speech-to-text transcription (PLACEHOLDER - not production-ready)
+//! - `yolo` - Object detection (PLACEHOLDER - not production-ready)
+//! - `multimodal` - Enables both whisper and yolo
+//!
+//! WARNING: The whisper and yolo features are currently placeholder implementations.
+//! They will compile and run but produce degraded or incorrect results.
+//! Do not enable these features in production until full implementations are complete.
 
 pub mod execute;
-pub mod whisper;
-// CRITICAL: DO NOT REMOVE OR DISABLE - YOLO module is production functionality
-// This module provides object detection capabilities and was restored after fixing candle-core conflicts.
-// DO NOT comment out this module declaration.
-// DO NOT disable YOLO functionality.
-// If you encounter issues, fix them rather than disabling this module.
-// Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
 pub mod mistral;
-pub mod yolo;
 pub mod policy_integration;
+
+// Whisper module - speech-to-text (placeholder implementation)
+// WARNING: This module contains placeholder implementations for STFT, mel filterbank,
+// and decoder. Transcription results will be incorrect until full implementation.
+#[cfg(feature = "whisper")]
+pub mod whisper;
+
+// YOLO module - object detection (placeholder implementation)
+// WARNING: This module contains placeholder implementations for object detection.
+// Detection results will be incorrect until full implementation.
+#[cfg(feature = "yolo")]
+pub mod yolo;
 
 // Re-export commonly used types
 pub use execute::{
@@ -21,15 +35,12 @@ pub use execute::{
     InferenceOptions, InferenceResult,
 };
 
-// Re-export Whisper inference
+// Re-export Whisper inference (only when feature enabled)
+#[cfg(feature = "whisper")]
 pub use whisper::{create_whisper_executor, WhisperInferenceExecutor};
 
-// CRITICAL: DO NOT REMOVE OR DISABLE - YOLO re-exports are production functionality
-// These exports enable YOLO object detection capabilities.
-// DO NOT comment out or disable these re-exports.
-// DO NOT remove YOLO functionality from the public API.
-// Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
-// Re-export YOLO inference
+// Re-export YOLO inference (only when feature enabled)
+#[cfg(feature = "yolo")]
 pub use yolo::{create_yolo_executor, YOLOInferenceExecutor};
 
 // Re-export Mistral inference (stub types only - functions disabled)

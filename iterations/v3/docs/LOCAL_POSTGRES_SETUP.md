@@ -1,5 +1,9 @@
 # Local PostgreSQL Setup (Non-Docker)
 
+> **Note:** For a streamlined setup experience, see the **[Getting Started Guide](./GETTING_STARTED.md)** which covers the standard setup path.
+>
+> This document provides detailed troubleshooting for local PostgreSQL authentication issues.
+
 This document describes how to set up a local PostgreSQL database for development, replacing the Docker-based setup.
 
 ## Prerequisites

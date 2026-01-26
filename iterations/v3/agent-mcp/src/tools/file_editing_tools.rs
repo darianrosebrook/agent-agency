@@ -1244,18 +1244,40 @@ impl FileEditingToolExecutor {
     }
 
     /// Execute file edit operation
+    ///
+    /// # Arguments
+    /// * `params` - JSON parameters including task_id, changes, and optional dry_run
+    /// * `working_directory` - Optional working directory from ExecutionContext.
+    ///   If provided and valid, use this instead of current_dir().
+    ///   This allows the caller to specify the worktree path created by the plan executor.
     pub async fn execute_file_edit(
         &self,
         params: serde_json::Value,
+        working_directory: Option<&str>,
     ) -> Result<serde_json::Value, String> {
+        tracing::info!(
+            "[execute_file_edit] ENTERED - params_keys={:?}, working_directory={:?}",
+            params.as_object().map(|o| o.keys().collect::<Vec<_>>()),
+            working_directory
+        );
+        
         let task_id: String = serde_json::from_value(
             params
                 .get("task_id")
                 .cloned()
-                .ok_or("Missing task_id parameter")?,
+                .ok_or_else(|| {
+                    tracing::error!("[execute_file_edit] Missing task_id parameter in params: {:?}", params);
+                    "Missing task_id parameter".to_string()
+                })?,
         )
-        .map_err(|e| format!("Invalid task_id parameter: {}", e))?;
+        .map_err(|e| {
+            tracing::error!("[execute_file_edit] Invalid task_id parameter: {}", e);
+            format!("Invalid task_id parameter: {}", e)
+        })?;
+        
+        tracing::info!("[execute_file_edit] Parsed task_id={}", task_id);
 
+        tracing::debug!("[execute_file_edit] Parsing changes parameter...");
         let changes: Vec<serde_json::Value> = serde_json::from_value(
             params
                 .get("changes")
@@ -1263,11 +1285,13 @@ impl FileEditingToolExecutor {
                 .ok_or("Missing changes parameter")?,
         )
         .map_err(|e| format!("Invalid changes parameter: {}", e))?;
+        tracing::info!("[execute_file_edit] Parsed {} changes", changes.len());
 
         let dry_run: bool = params
             .get("dry_run")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
+        tracing::debug!("[execute_file_edit] dry_run={}", dry_run);
 
         // Parse allowlist and budgets if provided
         let allowlist: AllowList = params
@@ -1292,17 +1316,21 @@ impl FileEditingToolExecutor {
                 max_lines: Some(1000),
                 max_time_seconds: Some(300),
             });
+        
+        tracing::debug!("[execute_file_edit] Parsed allowlist and budgets");
 
         // Convert JSON changes to Changeset format
         // Uses full-file replacement patch generation. This implementation is functionally complete
         // and works correctly. Future enhancement: Use diff algorithm (e.g., diff_match_patch)
         // for more granular patches when old_content and new_content are provided.
+        tracing::info!("[execute_file_edit] Creating patches from {} changes...", changes.len());
         let mut patches = Vec::new();
-        for change in &changes {
+        for (i, change) in changes.iter().enumerate() {
             let file_path = change
                 .get("path")
                 .and_then(|v| v.as_str())
                 .ok_or("Each change must have a 'path' field")?;
+            tracing::debug!("[execute_file_edit] Processing change {}: path={}", i, file_path);
 
             let old_content = change
                 .get("old_content")
@@ -1327,6 +1355,7 @@ impl FileEditingToolExecutor {
             };
             patches.push(patch);
         }
+        tracing::info!("[execute_file_edit] Created {} patches", patches.len());
 
         let changeset = system_common_interfaces::Changeset {
             id: system_common_interfaces::ChangesetId(uuid::Uuid::new_v4().to_string()),
@@ -1339,15 +1368,19 @@ impl FileEditingToolExecutor {
                 tags: vec!["file_edit".to_string()],
             },
         };
+        tracing::info!("[execute_file_edit] Changeset created, id={}", changeset.id.0);
 
         // Validate changeset
+        tracing::info!("[execute_file_edit] Validating changeset...");
         if let Err(e) = self
             .file_ops
             .validate_changeset(&changeset, &allowlist, &budgets)
             .await
         {
+            tracing::error!("[execute_file_edit] Changeset validation failed: {}", e);
             return Err(format!("Changeset validation failed: {}", e));
         }
+        tracing::info!("[execute_file_edit] Changeset validation passed");
 
         if dry_run {
             // Return preview without applying
@@ -1360,25 +1393,74 @@ impl FileEditingToolExecutor {
             }));
         }
 
-        // Get or create workspace
+        // Determine the working directory to use
+        // Priority: 1) ExecutionContext.working_directory, 2) current_dir()
         use std::path::Path;
-        let current_dir = std::env::current_dir()
-            .map_err(|e| format!("Failed to get current directory: {}", e))?;
-        let repo_path = Path::new(&current_dir);
+        
+        tracing::info!(
+            "[file_edit] Starting execute_file_edit for task_id={}, working_directory={:?}",
+            task_id,
+            working_directory
+        );
+        
+        let repo_path = if let Some(ref wd) = working_directory {
+            // Use the working_directory from ExecutionContext (set by plan executor's worktree)
+            tracing::info!(
+                "[file_edit] Using working_directory from ExecutionContext: {}",
+                wd
+            );
+            std::path::PathBuf::from(wd)
+        } else {
+            tracing::debug!(
+                "[file_edit] No working_directory in ExecutionContext, falling back to current_dir()"
+            );
+            std::env::current_dir()
+                .map_err(|e| format!("Failed to get current directory: {}", e))?
+        };
+        let repo_path = repo_path.as_path();
+        
+        tracing::info!(
+            "[file_edit] repo_path={:?}, exists={}, is_dir={}",
+            repo_path,
+            repo_path.exists(),
+            repo_path.is_dir()
+        );
 
-        // Create workspace if it doesn't exist
-        // Note: FileOperationsService doesn't have get_workspace method, so we create
-        // a new workspace even if one exists. The underlying implementation should handle
-        // reuse if the workspace already exists for this task_id.
+        // Check if working_directory is an existing worktree (skip workspace creation)
+        // The plan executor already creates a worktree at working_directory,
+        // so we should work directly in that directory instead of creating a new one.
+        let git_path = repo_path.join(".git");
+        if git_path.exists() {
+            tracing::info!(
+                "[file_edit] .git exists at {:?}, is_file={}, is_dir={}",
+                git_path,
+                git_path.is_file(),
+                git_path.is_dir()
+            );
+            if git_path.is_file() {
+                tracing::info!(
+                    "[file_edit] Path is a worktree (has .git file), will reuse existing worktree"
+                );
+            }
+        }
+
+        // Get or create workspace
+        // Note: If the working_directory is already a worktree, the underlying
+        // FileOperationsService should detect this and reuse it instead of creating
+        // a new workspace. This avoids duplicate worktree creation.
+        tracing::info!("[file_edit] Checking workspace status for task_id={}", task_id);
         let workspace = match self.file_ops.get_workspace_status(&task_id).await {
-            Ok(_) => {
+            Ok(status) => {
+                tracing::info!("[file_edit] Workspace exists, status={:?}", status);
                 // Workspace exists - create new handle (implementation should reuse existing workspace)
+                tracing::info!("[file_edit] Getting workspace handle...");
                 self.file_ops
                     .create_workspace(&task_id, repo_path)
                     .await
                     .map_err(|e| format!("Failed to access workspace: {}", e))?
             }
-            Err(_) => {
+            Err(e) => {
+                tracing::info!("[file_edit] Workspace doesn't exist (error: {}), creating new one...", e);
                 // Workspace doesn't exist, create it
                 self.file_ops
                     .create_workspace(&task_id, repo_path)
@@ -1386,6 +1468,8 @@ impl FileEditingToolExecutor {
                     .map_err(|e| format!("Failed to create workspace: {}", e))?
             }
         };
+        
+        tracing::info!("[file_edit] Workspace acquired successfully, applying changeset...");
 
         // Apply changeset
         let changeset_id = workspace

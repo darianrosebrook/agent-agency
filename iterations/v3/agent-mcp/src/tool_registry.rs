@@ -714,6 +714,20 @@ impl ToolRegistry {
     ) -> Result<serde_json::Value> {
         info!("Executing filesystem tool: {}", tool.name);
 
+        // Extract working_directory from ExecutionContext if available
+        // This allows the plan executor's worktree path to be used for file operations
+        let working_directory: Option<String> = request
+            .context
+            .as_ref()
+            .and_then(|ctx| ctx.working_directory.clone());
+
+        if let Some(ref wd) = working_directory {
+            info!(
+                "Using working_directory from ExecutionContext for {}: {}",
+                tool.name, wd
+            );
+        }
+
         // Route to appropriate file operation based on tool name
         let params = serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null);
         let executor = self.file_editing_executor.read().unwrap().clone();
@@ -727,7 +741,7 @@ impl ToolRegistry {
                 .await
                 .map_err(|e| anyhow::anyhow!("File write error: {}", e)),
             "file_edit" => executor
-                .execute_file_edit(params)
+                .execute_file_edit(params, working_directory.as_deref())
                 .await
                 .map_err(|e| anyhow::anyhow!("File edit error: {}", e)),
             "workspace_status" => executor

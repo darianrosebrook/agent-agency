@@ -14,7 +14,7 @@ use sha2::{Digest, Sha256};
 use sqlx::Row;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use tokio::process::Command;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::sync::RwLock;
@@ -278,8 +278,9 @@ impl TempMirrorWorkspace {
         task_id: &str,
         db_client: Option<Arc<DatabaseClient>>,
     ) -> Result<Self> {
-        let source_root = project_path
-            .canonicalize()
+        // Use tokio::fs::canonicalize to avoid blocking
+        let source_root = fs::canonicalize(project_path)
+            .await
             .map_err(|e| FileOpsError::Path(format!("Cannot canonicalize project path: {}", e)))?;
 
         // Create temp workspace directory
@@ -471,7 +472,7 @@ impl TempMirrorWorkspace {
 
     /// Mirror directory contents (rsync if available, manual copy otherwise)
     async fn mirror_directory(source: &Path, dest: &Path) -> Result<()> {
-        // Try rsync first
+        // Try rsync first (using async tokio::process::Command)
         let rsync_result = Command::new("rsync")
             .args([
                 "-a",
@@ -479,7 +480,8 @@ impl TempMirrorWorkspace {
                 &format!("{}/", source.display()),
                 &dest.display().to_string(),
             ])
-            .output();
+            .output()
+            .await;
 
         if rsync_result.is_ok() && rsync_result.as_ref().unwrap().status.success() {
             return Ok(());

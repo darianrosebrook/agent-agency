@@ -20,7 +20,7 @@ use std::collections::{HashMap, HashSet};
 ///
 /// Weights: w1=0.4, w2=0.3, w3=0.3
 pub fn calculate_coordination_quality(
-    decisions: &[DecisionPoint],
+    _decisions: &[DecisionPoint],
     events: &[CoordinationEvent],
 ) -> f64 {
     if events.is_empty() {

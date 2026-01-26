@@ -14,6 +14,142 @@ pub use dto::*;
 pub use errors::*;
 pub use ports::*;
 
+// ============================================================================
+// Research Evidence Types (shared between agent-research and agent-orchestration)
+// ============================================================================
+
+/// Research evidence collected during task execution
+///
+/// This struct is shared between agent-research and agent-orchestration
+/// to avoid circular dependencies. Both crates should import from here.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone)]
+pub struct ResearchEvidence {
+    /// Unique identifier for this evidence
+    #[cfg_attr(feature = "serde", schemars(with = "String"))]
+    pub id: uuid::Uuid,
+    /// Content of the evidence
+    pub content: String,
+    /// Type of evidence collected
+    pub evidence_type: ResearchEvidenceType,
+    /// Confidence level (0.0 to 1.0)
+    pub confidence: f64,
+    /// Source of the evidence
+    pub source: String,
+    /// When the evidence was collected
+    #[cfg_attr(feature = "serde", schemars(with = "String"))]
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+impl ResearchEvidence {
+    /// Create new research evidence
+    pub fn new(
+        content: String,
+        evidence_type: ResearchEvidenceType,
+        confidence: f64,
+        source: String,
+    ) -> Self {
+        Self {
+            id: uuid::Uuid::new_v4(),
+            content,
+            evidence_type,
+            confidence,
+            source,
+            timestamp: chrono::Utc::now(),
+        }
+    }
+}
+
+/// Types of research evidence (used by agent-orchestration)
+///
+/// This enum maps to EvidenceType but uses different naming conventions
+/// that match the agent-orchestration crate's expectations.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResearchEvidenceType {
+    /// Code review evidence
+    CodeReview,
+    /// Code analysis evidence (alias for CodeReview)
+    CodeAnalysis,
+    /// Test execution results
+    TestExecution,
+    /// Performance metrics
+    PerformanceMetrics,
+    /// Performance evidence (alias for PerformanceMetrics)
+    Performance,
+    /// Security scan results
+    SecurityScan,
+    /// Security evidence (alias for SecurityScan)
+    Security,
+    /// Constitutional/CAWS compliance evidence
+    Constitutional,
+    /// Documentation evidence
+    Documentation,
+}
+
+impl Default for ResearchEvidenceType {
+    fn default() -> Self {
+        Self::CodeReview
+    }
+}
+
+impl From<EvidenceType> for ResearchEvidenceType {
+    fn from(et: EvidenceType) -> Self {
+        match et {
+            EvidenceType::CodeAnalysis => ResearchEvidenceType::CodeAnalysis,
+            EvidenceType::TestResults | EvidenceType::TestResult => ResearchEvidenceType::TestExecution,
+            EvidenceType::Documentation => ResearchEvidenceType::Documentation,
+            EvidenceType::PerformanceMetrics => ResearchEvidenceType::PerformanceMetrics,
+            EvidenceType::SecurityScan => ResearchEvidenceType::SecurityScan,
+            EvidenceType::ConstitutionalReference => ResearchEvidenceType::Constitutional,
+            _ => ResearchEvidenceType::CodeReview,
+        }
+    }
+}
+
+/// Context for research evidence collection
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone)]
+pub struct ResearchContext {
+    /// Task identifier
+    #[cfg_attr(feature = "serde", schemars(with = "String"))]
+    pub task_id: uuid::Uuid,
+    /// Milestone identifier
+    pub milestone_id: String,
+    /// Types of evidence to collect
+    pub evidence_types: Vec<ResearchEvidenceType>,
+    /// Priority level
+    pub priority: String,
+}
+
+/// Trait for research evidence collection
+///
+/// Implementations can provide different evidence collection strategies.
+#[async_trait::async_trait]
+pub trait ResearchEvidenceCollector: Send + Sync {
+    /// Collect evidence for a given context
+    async fn collect_evidence(
+        &self,
+        context: &ResearchContext,
+    ) -> anyhow::Result<Vec<ResearchEvidence>>;
+}
+
+/// No-op research evidence collector for when research feature is disabled
+pub struct NoOpResearchEvidenceCollector;
+
+#[async_trait::async_trait]
+impl ResearchEvidenceCollector for NoOpResearchEvidenceCollector {
+    async fn collect_evidence(
+        &self,
+        _context: &ResearchContext,
+    ) -> anyhow::Result<Vec<ResearchEvidence>> {
+        Ok(vec![])
+    }
+}
+
 // Keep existing Evidence types for backward compatibility
 // These are still used by the ResearchEvidenceCollector port
 

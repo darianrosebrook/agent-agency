@@ -14,6 +14,7 @@ pub mod council_monitor;
 pub mod council_review;
 pub mod curriculum_learning;
 pub mod data_infrastructure_types;
+pub mod database_operations_bridge;
 pub mod data_processing_adapter;
 pub mod dependency_resolver;
 pub mod evidence;
@@ -139,6 +140,9 @@ pub use data_infrastructure_types::{
     CreatePlanningSession, CreatePlanningTelemetry, CreateWaiver, DatabaseOperations,
     UpdateExecutionPlan, UpdatePlanningSession, UpdateWaiver,
 };
+
+// From database_operations_bridge - no conflicts
+pub use database_operations_bridge::DatabaseOperationsBridge;
 
 // From refinement_loop - no conflicts
 pub use refinement_loop::*;

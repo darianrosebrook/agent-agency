@@ -3,7 +3,7 @@
 
 set -e
 
-API_BASE="http://127.0.0.1:8080/api/v1"
+API_BASE="http://127.0.0.1:8889/api/v1"
 
 echo "🧪 Testing API Integration Fixes"
 echo "=================================="
@@ -139,7 +139,7 @@ echo ""
 
 # Test 5: Health Check with Database
 echo "5️⃣  Testing Health Check with Database..."
-RESPONSE=$(curl -s "http://127.0.0.1:8080/health")
+RESPONSE=$(curl -s "http://127.0.0.1:8889/health")
 DB_STATUS=$(echo "$RESPONSE" | jq -r '.database.status // "unknown"' 2>/dev/null)
 OVERALL_STATUS=$(echo "$RESPONSE" | jq -r '.status // "unknown"' 2>/dev/null)
 

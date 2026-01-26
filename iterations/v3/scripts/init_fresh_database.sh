@@ -2,15 +2,25 @@
 # Initialize a fresh Agent Agency V3 database with all migrations
 # This script applies all migrations in order to create a complete schema
 # @author @darianrosebrook
+#
+# Environment Variables (with defaults):
+#   DB_HOST     - Database host (default: 127.0.0.1)
+#   DB_PORT     - Database port (default: 5432)
+#   DB_USER     - Database user (default: agent_agency)
+#   DB_NAME     - Database name (default: agent_agency)
+#   PGPASSWORD  - Database password (default: agent_agency_dev)
+#
+# For Docker test environment, override with:
+#   DB_PORT=5433 DB_USER=test_user DB_NAME=agent_agency_test PGPASSWORD=test_password ./init_fresh_database.sh
 
 set -e
 
-# Configuration
-DB_HOST="${DB_HOST:-localhost}"
-DB_PORT="${DB_PORT:-5433}"
-DB_USER="${DB_USER:-test_user}"
-DB_NAME="${DB_NAME:-agent_agency_test}"
-PGPASSWORD="${PGPASSWORD:-test_password}"
+# Configuration - defaults match standard local development setup
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_PORT="${DB_PORT:-5432}"
+DB_USER="${DB_USER:-agent_agency}"
+DB_NAME="${DB_NAME:-agent_agency}"
+PGPASSWORD="${PGPASSWORD:-agent_agency_dev}"
 export PGPASSWORD
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -124,7 +134,7 @@ echo "✅ Database initialization complete!"
 echo ""
 echo "To start the API server:"
 echo "  export DATABASE_URL=\"postgresql://$DB_USER:$PGPASSWORD@$DB_HOST:$DB_PORT/$DB_NAME\""
-echo "  cargo run --bin agent-agency-api-server --features orchestration,testing -- --port 8080"
+echo "  cargo run --bin agent-agency-api-server --features orchestration,testing -- --port 8889"
 
 
 

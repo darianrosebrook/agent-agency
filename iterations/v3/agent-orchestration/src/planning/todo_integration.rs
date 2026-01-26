@@ -1080,6 +1080,7 @@ mod tests {
         let execution_plan = agent_agency_contracts::planning_io::ExecutionPlan {
             id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
+            workspace_id: None,
             working_spec_id: "test".to_string(),
             contract_plan: agent_agency_contracts::WorkingSpec {
                 version: "1.0".to_string(),

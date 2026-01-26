@@ -52,13 +52,102 @@ use agent_agency_contracts::{
 
 use crate::simple_client::DatabaseClient;
 
+/// Observability data collected during task execution
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct TaskObservabilityData {
+    /// Council session summaries with judge contributions
+    pub council_sessions: Vec<CouncilSessionData>,
+    /// Worker action summaries
+    pub worker_actions_data: Vec<WorkerActionData>,
+    /// Decision points during execution
+    pub decision_points: Vec<DecisionPointData>,
+    /// Coordination events timeline
+    pub coordination_events: Vec<CoordinationEventData>,
+}
+
+/// Council session data for observability
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CouncilSessionData {
+    pub session_id: String,
+    pub timestamp: chrono::DateTime<Utc>,
+    pub phase: String,
+    pub verdict: String,
+    pub confidence: f64,
+    pub judge_contributions: Vec<JudgeContributionData>,
+}
+
+/// Judge contribution data
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct JudgeContributionData {
+    pub judge_id: String,
+    pub judge_name: String,
+    pub verdict: String,
+    pub confidence: f64,
+    pub reasoning: String,
+}
+
+/// Worker action data for observability
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct WorkerActionData {
+    pub worker_id: Uuid,
+    pub action: String,
+    pub milestone_id: String,
+    pub timestamp: chrono::DateTime<Utc>,
+    pub duration_ms: u64,
+    pub success: bool,
+    pub error: Option<String>,
+}
+
+/// Decision point data
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DecisionPointData {
+    pub decision_id: Uuid,
+    pub decision_type: String,
+    pub timestamp: chrono::DateTime<Utc>,
+    pub chosen_option: String,
+    pub alternatives_count: usize,
+    pub confidence: f64,
+    pub reasoning: String,
+}
+
+/// Coordination event data
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CoordinationEventData {
+    pub event_type: String,
+    pub timestamp: chrono::DateTime<Utc>,
+    pub details: serde_json::Value,
+}
+
+/// Extended execution result with observability data
+#[derive(Debug, Clone)]
+pub struct ExecutionResultWithObservability {
+    /// The primary execution artifacts
+    pub artifacts: ExecutionArtifacts,
+    /// Observability data collected during execution
+    pub observability: Option<TaskObservabilityData>,
+}
+
 /// Trait for task execution (allows dependency injection without circular dependencies)
 #[async_trait::async_trait]
 pub trait TaskExecutor: Send + Sync {
+    /// Execute a task and return artifacts
     async fn execute_task(
         &self,
         task_descriptor: &TaskDescriptor,
     ) -> Result<ExecutionArtifacts, anyhow::Error>;
+
+    /// Execute a task and return artifacts with observability data
+    /// Default implementation calls execute_task and returns empty observability
+    async fn execute_task_with_observability(
+        &self,
+        task_descriptor: &TaskDescriptor,
+    ) -> Result<ExecutionResultWithObservability, anyhow::Error> {
+        let artifacts = self.execute_task(task_descriptor).await?;
+        Ok(ExecutionResultWithObservability {
+            artifacts,
+            observability: None,
+        })
+    }
 }
 
 /// Orchestrator service for API integration
@@ -159,6 +248,19 @@ pub struct WorkerAction {
     pub action: String,
     pub result: String,
     pub artifacts: Vec<String>,
+}
+
+/// Status information about the orchestrator service
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct OrchestratorServiceStatus {
+    /// Whether the task executor is available
+    pub has_executor: bool,
+    /// Number of tasks currently being tracked
+    pub active_task_count: usize,
+    /// Number of tasks waiting in the queue
+    pub pending_queue_size: usize,
+    /// Maximum queue size before rejection
+    pub max_queue_size: usize,
 }
 
 impl OrchestratorService {
@@ -298,16 +400,25 @@ impl OrchestratorService {
     /// **OBSERVATIONAL API**: This submits a task request to the orchestrator.
     /// The orchestrator handles all execution independently. We only observe the results.
     /// Execution runs in the background via the orchestrator's own lifecycle.
+    ///
+    /// # Parameters
+    /// - `description`: Task description
+    /// - `execution_mode`: Optional execution mode ("strict", "auto", "dry-run")
+    /// - `context`: Optional additional context
+    /// - `risk_tier`: Optional risk tier (1=Critical, 2=Standard, 3=Low Risk). Defaults to 2.
     pub async fn execute_task(
         &self,
         description: String,
         execution_mode: Option<String>,
         context: Option<String>,
+        risk_tier: Option<u8>,
     ) -> Result<Uuid> {
         let task_id = Uuid::new_v4();
+        let risk_tier = risk_tier.unwrap_or(2); // Default to Tier 2 (Standard)
         info!(
-            "Executing task {}: {}",
+            "Executing task {} (risk_tier={}): {}",
             task_id,
+            risk_tier,
             description.chars().take(100).collect::<String>()
         );
 
@@ -337,7 +448,7 @@ impl OrchestratorService {
         let service = self.clone();
         tokio::spawn(async move {
             if let Err(e) = service
-                .execute_task_internal(task_id, description, execution_mode, context)
+                .execute_task_internal(task_id, description, execution_mode, context, risk_tier)
                 .await
             {
                 error!("Task execution failed for {}: {:?}", task_id, e);
@@ -363,6 +474,7 @@ impl OrchestratorService {
         description: String,
         execution_mode: Option<String>,
         _context: Option<String>,
+        risk_tier: u8,
     ) -> Result<()> {
         // Update status to planning
         {
@@ -377,7 +489,7 @@ impl OrchestratorService {
                     phase: "planning".to_string(),
                     reasoning: format!("Analyzing task: {}", description),
                     decision: "Starting task planning phase".to_string(),
-                    context: serde_json::json!({ "description": description }),
+                    context: serde_json::json!({ "description": description, "risk_tier": risk_tier }),
                 });
             }
         }
@@ -385,6 +497,22 @@ impl OrchestratorService {
         // Create task descriptor
         use agent_agency_contracts::planning_io::ChangeBudget;
         use agent_agency_contracts::task_request::ScopeRestrictions;
+
+        // Convert risk_tier u8 to RiskTier enum
+        let risk_tier_enum = match risk_tier {
+            1 => RiskTier::Tier1,
+            2 => RiskTier::Tier2,
+            3 => RiskTier::Tier3,
+            _ => RiskTier::Tier2, // Default to Tier 2 for unknown values
+        };
+
+        // Adjust priority based on risk tier
+        let priority = match risk_tier {
+            1 => TaskPriority::Critical,
+            2 => TaskPriority::Medium,
+            3 => TaskPriority::Low,
+            _ => TaskPriority::Medium,
+        };
 
         let task_descriptor = TaskDescriptor {
             task_id,
@@ -397,7 +525,7 @@ impl OrchestratorService {
                 allow_new_dependencies: false,
                 enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
             },
-            priority: TaskPriority::Medium,
+            priority,
             execution_mode: execution_mode
                 .as_deref()
                 .and_then(|m| match m {
@@ -407,7 +535,7 @@ impl OrchestratorService {
                     _ => Some(ExecutionMode::Auto),
                 })
                 .unwrap_or(ExecutionMode::Auto),
-            risk_tier: Some(RiskTier::Tier2),
+            risk_tier: Some(risk_tier_enum),
             blast_radius: BlastRadius {
                 modules: vec![],
                 data_migration: false,
@@ -443,9 +571,10 @@ impl OrchestratorService {
                 }
             }
 
-            match executor.execute_task(&task_descriptor).await {
-                Ok(artifacts) => {
+            match executor.execute_task_with_observability(&task_descriptor).await {
+                Ok(result) => {
                     info!("Task {} completed successfully", task_id);
+                    let artifacts = result.artifacts;
 
                     // Update task state with results
                     let mut tasks = self.active_tasks.write().await;
@@ -455,6 +584,64 @@ impl OrchestratorService {
                         // Note: working_spec would be retrieved separately by working_spec_id if needed
                         task.completed_at = Some(Utc::now());
                         task.updated_at = Utc::now();
+
+                        // Populate observability data if available
+                        if let Some(ref obs) = result.observability {
+                            // Convert council sessions to council decisions
+                            for session in &obs.council_sessions {
+                                for contrib in &session.judge_contributions {
+                                    task.council_decisions.push(CouncilDecision {
+                                        timestamp: session.timestamp,
+                                        judge: contrib.judge_name.clone(),
+                                        verdict: contrib.verdict.clone(),
+                                        reasoning: contrib.reasoning.clone(),
+                                        confidence: contrib.confidence,
+                                    });
+                                }
+                            }
+
+                            // Convert worker action data to worker actions
+                            for action_data in &obs.worker_actions_data {
+                                let result_str = if action_data.success {
+                                    "success".to_string()
+                                } else {
+                                    action_data.error.clone().unwrap_or_else(|| "failure".to_string())
+                                };
+                                task.worker_actions.push(WorkerAction {
+                                    timestamp: action_data.timestamp,
+                                    worker_id: action_data.worker_id,
+                                    action: action_data.action.clone(),
+                                    result: result_str,
+                                    artifacts: vec![action_data.milestone_id.clone()],
+                                });
+                            }
+
+                            // Convert decision points to chain of thought entries
+                            for decision in &obs.decision_points {
+                                task.chain_of_thought.push(ChainOfThoughtEntry {
+                                    timestamp: decision.timestamp,
+                                    phase: decision.decision_type.clone(),
+                                    reasoning: decision.reasoning.clone(),
+                                    decision: decision.chosen_option.clone(),
+                                    context: serde_json::json!({
+                                        "decision_id": decision.decision_id,
+                                        "alternatives_count": decision.alternatives_count,
+                                        "confidence": decision.confidence,
+                                    }),
+                                });
+                            }
+
+                            // Convert coordination events to chain of thought entries
+                            for event in &obs.coordination_events {
+                                task.chain_of_thought.push(ChainOfThoughtEntry {
+                                    timestamp: event.timestamp,
+                                    phase: event.event_type.clone(),
+                                    reasoning: format!("Coordination event: {}", event.event_type),
+                                    decision: serde_json::to_string(&event.details).unwrap_or_default(),
+                                    context: event.details.clone(),
+                                });
+                            }
+                        }
 
                         // Record completion in chain of thought
                         task.chain_of_thought.push(ChainOfThoughtEntry {
@@ -579,6 +766,29 @@ impl OrchestratorService {
 
             // Return success - task is queued and will be processed when executor is available
             Ok(())
+        }
+    }
+
+    /// Check if task executor is available
+    ///
+    /// Returns true if the task executor has been initialized and is ready to execute tasks.
+    /// When false, tasks will be queued for later execution.
+    pub fn has_executor(&self) -> bool {
+        self.task_executor.is_some()
+    }
+
+    /// Get status information about the orchestrator service
+    ///
+    /// Returns diagnostic information about the service's current state.
+    pub async fn get_service_status(&self) -> OrchestratorServiceStatus {
+        let active_task_count = self.active_tasks.read().await.len();
+        let pending_queue_size = self.pending_task_queue.read().await.len();
+        
+        OrchestratorServiceStatus {
+            has_executor: self.has_executor(),
+            active_task_count,
+            pending_queue_size,
+            max_queue_size: self.max_queue_size,
         }
     }
 

@@ -69,6 +69,15 @@ metal-backend = ["candle-core/metal"]
 coreml = ["coreml-rs"]  # CoreML feature retained for future re-enable
 coreml_probe = []  # Feature flag for CoreML probe functionality
 
+# Multimodal inference features - currently placeholder implementations
+# WARNING: These features are NOT production-ready and will produce degraded results
+# Enable only for development/testing purposes
+whisper = []  # Speech-to-text transcription (placeholder implementation)
+yolo = []     # Object detection (placeholder implementation)
+
+# Full multimodal support - requires all placeholder implementations
+multimodal = ["whisper", "yolo"]
+
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.0"

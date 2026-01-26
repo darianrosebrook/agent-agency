@@ -609,10 +609,20 @@ impl Council {
         session.status = SessionStatus::ReviewInProgress;
         self.conduct_judge_reviews(session, &review_context).await?;
 
-        // Phase 3: Verdict aggregation
+        // Phase 3: Verdict aggregation with risk-tier-based configuration
         session.status = SessionStatus::AggregationInProgress;
-        let aggregation_result = self
-            .verdict_aggregator
+        
+        // Use risk-tier-based aggregation config for appropriate thresholds
+        // Tier 1 (Critical): Strict consensus (0.9 threshold)
+        // Tier 2 (Standard): Default (0.7 threshold)
+        // Tier 3 (Low Risk): Relaxed (0.5 threshold)
+        let aggregation_config = crate::verdict_aggregation::AggregationConfig::from_risk_tier(review_context.risk_tier);
+        tracing::info!(
+            "Council review using risk_tier={} with consensus_threshold={:.2}",
+            review_context.risk_tier, aggregation_config.consensus_threshold
+        );
+        let risk_tier_aggregator = VerdictAggregator::new(aggregation_config);
+        let aggregation_result = risk_tier_aggregator
             .aggregate_verdicts(session.contributions.clone(), &review_context)
             .await?;
         session.aggregation_result = Some(aggregation_result);
@@ -1822,6 +1832,7 @@ impl Council {
             },
             previous_reviews: Vec::new(),
             constraints: std::collections::HashMap::new(),
+            review_type: crate::judge_backup::types::ReviewType::PlanReview,
         };
 
         // Select judges for this session

@@ -32,7 +32,7 @@ evaluate_task() {
     echo "   Submitted: $submitted_time"
 
     # Get task status
-    status_response=$(curl -s "http://localhost:8080/api/v1/tasks/$task_id" 2>/dev/null)
+    status_response=$(curl -s "http://localhost:8889/api/v1/tasks/$task_id" 2>/dev/null)
     if [ $? -ne 0 ] || [ -z "$status_response" ]; then
         echo "   ❌ Status: Unable to fetch"
         echo "$task_id|$title|FAILED|Unable to fetch status" >> "$RESULTS_FILE"

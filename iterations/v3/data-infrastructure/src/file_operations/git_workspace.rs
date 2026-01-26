@@ -2,14 +2,17 @@
 //!
 //! Uses Git worktrees for safe, versioned file editing with automatic rollback
 //! capabilities and integration with Git's change tracking.
+//!
+//! All git operations use `tokio::process::Command` to avoid blocking the async runtime.
 
 use crate::file_operations::{
     validate_changeset, AllowList, Budgets, ChangeSet, ChangeSetId, FileOpsError, Hunk, Patch,
     Result, Workspace,
 };
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::Command as StdCommand;
 use tokio::fs;
+use tokio::process::Command;
 use uuid::Uuid;
 
 /// Git worktree-based workspace for safe file operations
@@ -24,22 +27,83 @@ pub struct GitWorktreeWorkspace {
     _original_branch: String,
     /// Worktree branch name
     worktree_branch: String,
+    /// Whether this workspace owns the worktree (should clean up on drop)
+    /// If false, the worktree was created externally (e.g., by plan executor)
+    /// and we should NOT delete it on drop.
+    owns_worktree: bool,
 }
 
 impl GitWorktreeWorkspace {
-    /// Create a new Git worktree workspace
+    /// Create a new Git worktree workspace, or use an existing one
+    ///
+    /// If `repo_path` is already a git worktree (has a `.git` file pointing to the
+    /// main repo), this will use it directly instead of creating a new worktree.
+    /// This allows the plan executor's worktree to be reused by file editing tools.
     pub async fn new(repo_path: &Path, task_id: &str) -> Result<Self> {
-        let repo_root = repo_path
-            .canonicalize()
-            .map_err(|e| FileOpsError::Path(format!("Cannot canonicalize repo path: {}", e)))?;
+        tracing::info!(
+            "[GitWorktreeWorkspace::new] Starting for repo_path={:?}, task_id={}",
+            repo_path,
+            task_id
+        );
+        
+        // Use tokio::fs::canonicalize to avoid blocking
+        tracing::debug!("[GitWorktreeWorkspace::new] Canonicalizing path...");
+        let repo_root = fs::canonicalize(repo_path)
+            .await
+            .map_err(|e| {
+                tracing::error!("[GitWorktreeWorkspace::new] Failed to canonicalize: {}", e);
+                FileOpsError::Path(format!("Cannot canonicalize repo path: {}", e))
+            })?;
+        tracing::info!("[GitWorktreeWorkspace::new] Canonicalized to: {:?}", repo_root);
 
-        // Verify this is a Git repository
-        if !repo_root.join(".git").exists() {
-            return Err(FileOpsError::Path("Not a Git repository".to_string()));
+        let git_path = repo_root.join(".git");
+        tracing::debug!("[GitWorktreeWorkspace::new] Checking .git at: {:?}", git_path);
+
+        // Use tokio::fs::symlink_metadata to check file type without blocking
+        // This is non-blocking and tells us if .git is a file (worktree) or directory (main repo)
+        let git_metadata = fs::symlink_metadata(&git_path).await;
+        
+        tracing::info!(
+            "[GitWorktreeWorkspace::new] .git metadata result: {:?}",
+            git_metadata.as_ref().map(|m| format!("is_file={}, is_dir={}", m.is_file(), m.is_dir()))
+        );
+
+        // Check if this is already a worktree (has .git file, not directory)
+        match &git_metadata {
+            Ok(meta) if meta.is_file() => {
+                tracing::info!(
+                    "[GitWorktreeWorkspace::new] .git is a FILE, this is an existing worktree: {:?}",
+                    repo_root
+                );
+                return Self::use_existing_worktree(repo_root, task_id).await;
+            }
+            Ok(meta) if meta.is_dir() => {
+                // This is a main git repo, proceed with worktree creation below
+                tracing::info!(
+                    "[GitWorktreeWorkspace::new] .git is a DIRECTORY, this is a main repo - will create new worktree"
+                );
+            }
+            Ok(_) => {
+                tracing::error!(
+                    "[GitWorktreeWorkspace::new] .git is neither file nor directory"
+                );
+                return Err(FileOpsError::Path(
+                    ".git is neither a file nor a directory".to_string(),
+                ));
+            }
+            Err(e) => {
+                // .git doesn't exist
+                tracing::error!(
+                    "[GitWorktreeWorkspace::new] .git doesn't exist at {:?}: {}",
+                    git_path,
+                    e
+                );
+                return Err(FileOpsError::Path("Not a Git repository".to_string()));
+            }
         }
 
         // Get current branch
-        let original_branch = Self::get_current_branch(&repo_root)?;
+        let original_branch = Self::get_current_branch(&repo_root).await?;
 
         // Create worktree branch name
         let worktree_branch = format!("caws/{}", task_id);
@@ -53,7 +117,7 @@ impl GitWorktreeWorkspace {
         let _ = fs::remove_dir_all(&worktree_path).await;
 
         // Create Git worktree
-        Self::create_git_worktree(&repo_root, &worktree_branch, &worktree_path)?;
+        Self::create_git_worktree(&repo_root, &worktree_branch, &worktree_path).await?;
 
         Ok(Self {
             repo_root,
@@ -61,15 +125,94 @@ impl GitWorktreeWorkspace {
             _task_id: task_id.to_string(),
             _original_branch: original_branch,
             worktree_branch,
+            owns_worktree: true, // We created this worktree, so we own it
         })
     }
 
-    /// Get the current Git branch
-    fn get_current_branch(repo_path: &Path) -> Result<String> {
+    /// Use an existing worktree path directly without creating a new one
+    ///
+    /// This is called when `repo_path` is detected to already be a worktree
+    /// (e.g., created by the plan executor's worktree manager).
+    async fn use_existing_worktree(worktree_path: PathBuf, task_id: &str) -> Result<Self> {
+        tracing::info!(
+            "[use_existing_worktree] Entering for worktree_path={:?}, task_id={}",
+            worktree_path,
+            task_id
+        );
+        
+        // Read the .git file to find the main repo's .git directory
+        let git_file_path = worktree_path.join(".git");
+        tracing::debug!("[use_existing_worktree] Reading .git file at: {:?}", git_file_path);
+        
+        let git_content = fs::read_to_string(&git_file_path)
+            .await
+            .map_err(|e| {
+                tracing::error!("[use_existing_worktree] Failed to read .git file: {}", e);
+                FileOpsError::Io(e)
+            })?;
+        
+        tracing::debug!("[use_existing_worktree] .git file content: {:?}", git_content.trim());
+
+        // Parse the gitdir pointer (format: "gitdir: /path/to/main/repo/.git/worktrees/worktree-name")
+        let gitdir = git_content
+            .trim()
+            .strip_prefix("gitdir: ")
+            .ok_or_else(|| {
+                tracing::error!(
+                    "[use_existing_worktree] Invalid .git file format, expected 'gitdir: ...', got: {:?}",
+                    git_content
+                );
+                FileOpsError::Path("Invalid .git file format".to_string())
+            })?;
+        
+        tracing::debug!("[use_existing_worktree] Parsed gitdir: {}", gitdir);
+
+        // Find the main repo root from the gitdir path
+        // gitdir points to: /main-repo/.git/worktrees/worktree-name
+        // We want:          /main-repo
+        let repo_root = PathBuf::from(gitdir)
+            .parent() // .git/worktrees
+            .and_then(|p| p.parent()) // .git
+            .and_then(|p| p.parent()) // main-repo
+            .map(|p| p.to_path_buf())
+            .ok_or_else(|| {
+                tracing::error!(
+                    "[use_existing_worktree] Cannot determine repo root from gitdir: {}",
+                    gitdir
+                );
+                FileOpsError::Path("Cannot determine repo root from gitdir".to_string())
+            })?;
+        
+        tracing::info!("[use_existing_worktree] Determined repo_root: {:?}", repo_root);
+
+        // Get the current branch in the worktree
+        tracing::debug!("[use_existing_worktree] Getting current branch...");
+        let current_branch = Self::get_current_branch(&worktree_path).await?;
+
+        tracing::info!(
+            "[use_existing_worktree] SUCCESS - Using existing worktree at {:?} (repo: {:?}, branch: {})",
+            worktree_path,
+            repo_root,
+            current_branch
+        );
+
+        Ok(Self {
+            repo_root,
+            worktree_path,
+            _task_id: task_id.to_string(),
+            _original_branch: current_branch.clone(),
+            worktree_branch: current_branch,
+            owns_worktree: false, // This is an externally-created worktree, don't clean it up
+        })
+    }
+
+    /// Get the current Git branch (async)
+    async fn get_current_branch(repo_path: &Path) -> Result<String> {
         let output = Command::new("git")
             .args(["branch", "--show-current"])
             .current_dir(repo_path)
             .output()
+            .await
             .map_err(|e| {
                 FileOpsError::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -89,8 +232,8 @@ impl GitWorktreeWorkspace {
             .to_string())
     }
 
-    /// Create a Git worktree
-    fn create_git_worktree(
+    /// Create a Git worktree (async)
+    async fn create_git_worktree(
         repo_path: &Path,
         branch_name: &str,
         worktree_path: &Path,
@@ -106,6 +249,7 @@ impl GitWorktreeWorkspace {
             .args(["worktree", "list"])
             .current_dir(repo_path)
             .output()
+            .await
             .map_err(|e| {
                 FileOpsError::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -139,6 +283,7 @@ impl GitWorktreeWorkspace {
                             ])
                             .current_dir(repo_path)
                             .output()
+                            .await
                             .map_err(|e| {
                                 FileOpsError::Io(std::io::Error::new(
                                     std::io::ErrorKind::Other,
@@ -160,10 +305,10 @@ impl GitWorktreeWorkspace {
             }
         }
 
-        // Check if worktree directory still exists and remove it manually
+        // Check if worktree directory still exists and remove it manually (use async fs)
         if worktree_path.exists() {
             tracing::info!("Removing existing worktree directory: {:?}", worktree_path);
-            let _ = std::fs::remove_dir_all(worktree_path);
+            let _ = fs::remove_dir_all(worktree_path).await;
         }
 
         // Check if branch still exists and delete it if it does
@@ -171,6 +316,7 @@ impl GitWorktreeWorkspace {
             .args(["branch", "--list", branch_name])
             .current_dir(repo_path)
             .output()
+            .await
             .map_err(|e| {
                 FileOpsError::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -187,6 +333,7 @@ impl GitWorktreeWorkspace {
                     .args(["branch", "-D", branch_name])
                     .current_dir(repo_path)
                     .output()
+                    .await
                     .map_err(|e| {
                         FileOpsError::Io(std::io::Error::new(
                             std::io::ErrorKind::Other,
@@ -224,6 +371,7 @@ impl GitWorktreeWorkspace {
             ])
             .current_dir(repo_path)
             .output()
+            .await
             .map_err(|e| {
                 FileOpsError::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -252,6 +400,7 @@ impl GitWorktreeWorkspace {
             .args(["worktree", "list"])
             .current_dir(repo_path)
             .output()
+            .await
             .map_err(|e| {
                 FileOpsError::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -338,12 +487,13 @@ impl GitWorktreeWorkspace {
         Ok(lines.join("\n"))
     }
 
-    /// Commit changes in the worktree
+    /// Commit changes in the worktree (async)
     async fn commit_changes(&self, changeset_id: &ChangeSetId) -> Result<()> {
         let output = Command::new("git")
             .args(["add", "."])
             .current_dir(&self.worktree_path)
             .output()
+            .await
             .map_err(|e| {
                 FileOpsError::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -362,6 +512,7 @@ impl GitWorktreeWorkspace {
             .args(["commit", "-m", &commit_msg])
             .current_dir(&self.worktree_path)
             .output()
+            .await
             .map_err(|e| {
                 FileOpsError::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -414,6 +565,7 @@ impl Workspace for GitWorktreeWorkspace {
             .args(["reset", "--hard", "HEAD~1"])
             .current_dir(&self.worktree_path)
             .output()
+            .await
             .map_err(|e| {
                 FileOpsError::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -435,6 +587,7 @@ impl Workspace for GitWorktreeWorkspace {
             .args(["merge", &self.worktree_branch])
             .current_dir(&self.repo_root)
             .output()
+            .await
             .map_err(|e| {
                 FileOpsError::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -464,8 +617,18 @@ impl Drop for GitWorktreeWorkspace {
             return;
         }
 
-        // Clean up worktree on drop
-        let _ = Command::new("git")
+        // Don't clean up externally-created worktrees (e.g., from plan executor)
+        // The plan executor manages their lifecycle.
+        if !self.owns_worktree {
+            tracing::debug!(
+                "Skipping cleanup of externally-owned worktree: {:?}",
+                self.worktree_path
+            );
+            return;
+        }
+
+        // Clean up worktree on drop (uses sync Command since drop is not async)
+        let _ = StdCommand::new("git")
             .args(["worktree", "remove", &self.worktree_path.to_string_lossy()])
             .current_dir(&self.repo_root)
             .status();
@@ -485,11 +648,12 @@ mod tests {
         let temp_dir = TempDir::new()?;
         let repo_path = temp_dir.path().to_path_buf();
 
-        // Initialize git repo
+        // Initialize git repo (use async Command)
         let output = Command::new("git")
             .args(["init"])
             .current_dir(&repo_path)
-            .output()?;
+            .output()
+            .await?;
 
         assert!(output.status.success());
 
@@ -497,24 +661,28 @@ mod tests {
         Command::new("git")
             .args(["config", "user.name", "Test User"])
             .current_dir(&repo_path)
-            .output()?;
+            .output()
+            .await?;
 
         Command::new("git")
             .args(["config", "user.email", "test@example.com"])
             .current_dir(&repo_path)
-            .output()?;
+            .output()
+            .await?;
 
         // Create initial file and commit
         fs::write(repo_path.join("README.md"), "# Test Repo").await?;
         Command::new("git")
             .args(["add", "README.md"])
             .current_dir(&repo_path)
-            .output()?;
+            .output()
+            .await?;
 
         Command::new("git")
             .args(["commit", "-m", "Initial commit"])
             .current_dir(&repo_path)
-            .output()?;
+            .output()
+            .await?;
 
         Ok((temp_dir, repo_path))
     }

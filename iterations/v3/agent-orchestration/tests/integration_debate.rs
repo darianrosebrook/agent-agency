@@ -15,9 +15,8 @@ use agent_orchestration::council::{
     Council, DebateConfig, DebateResult, DebateStatus, WorkerSolution,
     SolutionEvidence, BudgetAdherence,
 };
-use agent_orchestration::judge_backup::types::ReviewContext;
+use agent_orchestration::judge_backup::types::{ReviewContext, ReviewType};
 use agent_orchestration::planning::refinement_loop::{RefinementLoopCoordinator, DebateCoordinator};
-use agent_agency_contracts::task_request::TaskDescriptor;
 
 /// Mock debate coordinator for testing
 struct MockDebateCoordinator {
@@ -38,7 +37,7 @@ impl DebateCoordinator for MockDebateCoordinator {
 }
 
 /// Test helper to create mock working spec
-fn create_mock_working_spec(id: &str, title: &str, risk_tier: u8) -> WorkingSpec {
+fn create_mock_working_spec(id: &str, title: &str, risk_tier: u32) -> WorkingSpec {
     WorkingSpec {
         version: "1.0".to_string(),
         id: id.to_string(),
@@ -67,7 +66,7 @@ fn create_mock_working_spec(id: &str, title: &str, risk_tier: u8) -> WorkingSpec
 }
 
 /// Test helper to create diverse worker solutions
-fn create_diverse_solutions(count: usize, risk_tier: u8) -> Vec<WorkerSolution> {
+fn create_diverse_solutions(count: usize, risk_tier: u32) -> Vec<WorkerSolution> {
     (0..count)
         .map(|i| WorkerSolution {
             worker_id: format!("worker_{}", i),
@@ -124,15 +123,6 @@ async fn test_two_solution_debate_flow() {
 
     // Create two diverse solutions
     let solutions = create_diverse_solutions(2, 2);
-    let task_descriptor = TaskDescriptor {
-        task_id: Uuid::new_v4(),
-        working_spec: solutions[0].working_spec.clone(),
-        execution_mode: agent_agency_contracts::ExecutionMode::Auto,
-        priority: agent_agency_contracts::Priority::Normal,
-        timeout: None,
-        dependencies: vec![],
-        metadata: HashMap::new(),
-    };
 
     let review_context = ReviewContext {
         session_id: "test_debate_2_solutions".to_string(),
@@ -140,6 +130,7 @@ async fn test_two_solution_debate_flow() {
         risk_tier: 2,
         previous_reviews: vec![],
         constraints: HashMap::new(),
+        review_type: ReviewType::default(),
     };
 
     // Conduct debate
@@ -194,6 +185,7 @@ async fn test_three_solution_debate_with_judge_questions() {
         risk_tier: 2, // Should enable judge questions
         previous_reviews: vec![],
         constraints: HashMap::new(),
+        review_type: ReviewType::default(),
     };
 
     let debate_result = debate_coordinator
@@ -234,6 +226,7 @@ async fn test_four_solution_debate_complexity() {
         risk_tier: 1, // Tier 1: more rounds, higher thresholds
         previous_reviews: vec![],
         constraints: HashMap::new(),
+        review_type: ReviewType::default(),
     };
 
     let debate_result = debate_coordinator
@@ -330,6 +323,7 @@ async fn test_risk_tier_debate_configurations() {
         risk_tier: 1,
         previous_reviews: vec![],
         constraints: HashMap::new(),
+        review_type: ReviewType::default(),
     };
 
     // The council should use DebateConfig::from_risk_tier(1) internally
@@ -343,6 +337,7 @@ async fn test_risk_tier_debate_configurations() {
         risk_tier: 3,
         previous_reviews: vec![],
         constraints: HashMap::new(),
+        review_type: ReviewType::default(),
     };
 
     // The council should use DebateConfig::from_risk_tier(3) internally

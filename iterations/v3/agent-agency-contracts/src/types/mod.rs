@@ -17,3 +17,7 @@ pub mod prelude;
 pub mod research;
 pub mod tool_chain;
 pub mod validation;
+
+// Re-export commonly used types
+pub use council::ReviewPriority;
+pub use research::{ResearchEvidence, ResearchEvidenceType, ResearchContext, ResearchEvidenceCollector, NoOpResearchEvidenceCollector};
