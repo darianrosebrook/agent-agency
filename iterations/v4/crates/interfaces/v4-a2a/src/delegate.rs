@@ -96,11 +96,19 @@ impl Tool for DelegateTool {
 
         match operator {
             OperatorType::Control(ControlOp::Delegate { agent_id, task }) => {
+                let span = tracing::info_span!(
+                    "a2a_delegation",
+                    agent_id = agent_id.as_str(),
+                    task_preview = &task[..task.len().min(80)],
+                );
+                let _guard = span.enter();
+
                 let client = self.clients.get(agent_id).ok_or_else(|| {
                     ToolError::NotFound(format!("No A2A client registered for agent '{}'", agent_id))
                 })?;
 
                 let a2a_task = client.send_message(task.as_str()).await.map_err(|e| {
+                    tracing::warn!(agent_id = agent_id.as_str(), error = %e, "A2A delegation failed");
                     ToolError::ExecutionFailed(format!("A2A delegation failed: {}", e))
                 })?;
 
@@ -110,6 +118,14 @@ impl Tool for DelegateTool {
                     .as_ref()
                     .map(|a| a.len())
                     .unwrap_or(0);
+
+                let elapsed_ms = start.elapsed().as_millis() as u64;
+                tracing::info!(
+                    agent_id = agent_id.as_str(),
+                    duration_ms = elapsed_ms,
+                    artifact_count = artifact_count,
+                    "A2A delegation complete"
+                );
 
                 let mut hasher = Sha256::new();
                 hasher.update(response_text.as_bytes());
@@ -125,7 +141,7 @@ impl Tool for DelegateTool {
                         "task_state": format!("{:?}", a2a_task.status.state),
                     })),
                     error: None,
-                    execution_time_ms: start.elapsed().as_millis() as u64,
+                    execution_time_ms: elapsed_ms,
                     content_hash: Some(hash),
                 })
             }

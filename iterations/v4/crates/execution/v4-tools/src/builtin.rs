@@ -847,9 +847,20 @@ impl Tool for FileEditTool {
 }
 
 /// Shell command execution tool
+/// Sandbox profile selection for `sandbox-exec` on macOS.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShellSandboxProfile {
+    /// Read/write within working dir, network HTTP/HTTPS, process spawning.
+    Standard,
+    /// Read-only, no network, no process spawning.
+    Restricted,
+}
+
 pub struct ShellExecTool {
     blocked_commands: Vec<String>,
     default_timeout_ms: u64,
+    /// When set, wraps commands with `sandbox-exec` on macOS.
+    sandbox_profile: Option<ShellSandboxProfile>,
 }
 
 impl ShellExecTool {
@@ -862,7 +873,14 @@ impl ShellExecTool {
                 ":(){ :|:& };:".to_string(),
             ],
             default_timeout_ms: 30000,
+            sandbox_profile: None,
         }
+    }
+
+    /// Enable OS-level sandboxing with the given profile.
+    pub fn with_sandbox_profile(mut self, profile: ShellSandboxProfile) -> Self {
+        self.sandbox_profile = Some(profile);
+        self
     }
 
     pub fn with_timeout(mut self, timeout_ms: u64) -> Self {
@@ -874,6 +892,64 @@ impl ShellExecTool {
         self.blocked_commands
             .iter()
             .any(|blocked| command.contains(blocked))
+    }
+
+    /// Build a `Command` for the given shell command, optionally wrapping with `sandbox-exec`.
+    async fn build_command(
+        &self,
+        command: &str,
+        working_dir: Option<&String>,
+    ) -> tokio::process::Command {
+        if let Some(profile) = self.sandbox_profile {
+            if cfg!(target_os = "macos") {
+                let allowed_path = working_dir
+                    .map(|d| d.as_str())
+                    .unwrap_or("/tmp");
+
+                // Embed the profile content and write to a temp file
+                let (profile_name, profile_content) = match profile {
+                    ShellSandboxProfile::Standard => (
+                        "v4-sandbox-standard.sb",
+                        include_str!("../../v4-sandbox/profiles/standard.sb"),
+                    ),
+                    ShellSandboxProfile::Restricted => (
+                        "v4-sandbox-restricted.sb",
+                        include_str!("../../v4-sandbox/profiles/restricted.sb"),
+                    ),
+                };
+
+                let profile_path = std::env::temp_dir().join(profile_name);
+                // Best-effort write, ignore errors (may already exist)
+                let _ = tokio::fs::write(&profile_path, profile_content).await;
+
+                let mut cmd = tokio::process::Command::new("sandbox-exec");
+                cmd.arg("-f")
+                    .arg(&profile_path)
+                    .arg("-D")
+                    .arg(format!("ALLOWED_PATH={allowed_path}"))
+                    .arg("/bin/sh")
+                    .arg("-c")
+                    .arg(command);
+
+                if let Some(dir) = working_dir {
+                    cmd.current_dir(dir);
+                }
+
+                return cmd;
+            }
+            // Non-macOS: warn and fall back
+            tracing::warn!(
+                profile = ?profile,
+                "sandbox-exec not available on this platform, executing without OS-level sandbox"
+            );
+        }
+
+        let mut cmd = tokio::process::Command::new("/bin/sh");
+        cmd.arg("-c").arg(command);
+        if let Some(dir) = working_dir {
+            cmd.current_dir(dir);
+        }
+        cmd
     }
 }
 
@@ -915,12 +991,7 @@ impl Tool for ShellExecTool {
 
                 let timeout = timeout_ms.unwrap_or(self.default_timeout_ms);
 
-                let mut cmd = tokio::process::Command::new("/bin/sh");
-                cmd.arg("-c").arg(command);
-
-                if let Some(dir) = working_dir {
-                    cmd.current_dir(dir);
-                }
+                let mut cmd = self.build_command(command, working_dir.as_ref()).await;
 
                 cmd.stdout(std::process::Stdio::piped());
                 cmd.stderr(std::process::Stdio::piped());

@@ -24,5 +24,13 @@ thiserror.workspace = true
 # Unique identifiers
 uuid.workspace = true
 
+# Logging
+tracing.workspace = true
+
+# OpenTelemetry
+opentelemetry.workspace = true
+opentelemetry_sdk.workspace = true
+opentelemetry-otlp.workspace = true
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

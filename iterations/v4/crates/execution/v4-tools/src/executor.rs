@@ -71,6 +71,14 @@ impl ToolExecutor {
         // Find a tool that can execute this operator
         let tool = self.find_tool_for(operator)?;
 
+        let span = tracing::info_span!(
+            "tool_execution",
+            tool_id = tool.id(),
+            operator_class = operator.class(),
+            task_id = context.task_id.as_str(),
+        );
+        let _guard = span.enter();
+
         // Validate the operator
         tool.validate(operator)?;
 
@@ -95,6 +103,12 @@ impl ToolExecutor {
                 }
                 op_result.execution_time_ms = elapsed_ms;
 
+                tracing::info!(
+                    duration_ms = elapsed_ms,
+                    success = op_result.success,
+                    "Tool execution complete"
+                );
+
                 Ok(ExecutionRecord {
                     tool_id: tool.id().to_string(),
                     operator: operator.clone(),
@@ -105,8 +119,21 @@ impl ToolExecutor {
                     elapsed_ms,
                 })
             }
-            Ok(Err(e)) => Err(ExecutorError::ToolError(e)),
-            Err(_) => Err(ExecutorError::Timeout(context.timeout_ms)),
+            Ok(Err(e)) => {
+                tracing::warn!(
+                    duration_ms = elapsed_ms,
+                    error = %e,
+                    "Tool execution failed"
+                );
+                Err(ExecutorError::ToolError(e))
+            }
+            Err(_) => {
+                tracing::warn!(
+                    timeout_ms = context.timeout_ms,
+                    "Tool execution timed out"
+                );
+                Err(ExecutorError::Timeout(context.timeout_ms))
+            }
         }
     }
 

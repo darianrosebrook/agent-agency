@@ -42,6 +42,7 @@
 
 pub mod health;
 pub mod metrics;
+pub mod otlp;
 pub mod tracing;
 
 // Re-exports for convenience
@@ -51,6 +52,7 @@ pub use health::{
 };
 pub use metrics::{Counter, Gauge, Histogram, HistogramValue, Metric, MetricType, MetricValue, MetricsRegistry};
 pub use tracing::{Span, SpanBuilder, SpanEvent, SpanId, SpanStatus, Trace, TraceCollector, TraceId};
+pub use otlp::{OtlpConfig, OtlpError};
 
 /// Initialize observability with default settings
 pub fn init() -> ObservabilityContext {

@@ -1,0 +1,32 @@
+;;
+;; restricted.sb — Restricted sandbox profile for untrusted execution
+;;
+;; Allows: file read anywhere, NO file write, NO network, NO process spawning
+;;         (except /bin/sh itself to start the command).
+;;
+;; Usage: sandbox-exec -f restricted.sb -D ALLOWED_PATH=/path/to/workdir /bin/sh -c "command"
+;;
+
+(version 1)
+(deny default)
+
+;; --- File access (read-only) ---
+;; Allow reads globally (required for dylib loading, system files, etc.)
+(allow file-read*)
+
+;; No file-write rules — all writes are denied by default
+
+;; --- Process execution (minimal) ---
+;; Only allow /bin/sh itself (needed to start the command)
+(allow process-exec
+    (literal "/bin/sh"))
+
+(allow process-fork)
+
+;; --- No network ---
+;; All network-outbound is denied by default
+
+;; --- System (minimal) ---
+(allow sysctl-read)
+(allow mach-lookup)
+(allow signal (target self))

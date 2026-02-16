@@ -60,7 +60,8 @@ pub mod tool;
 // Re-export main types
 pub use builtin::{
     register_builtin_tools, CodeSearchTool, DirectoryListTool, FileEditTool, FilePatchTool,
-    FileReadTool, FileWriteTool, MemoryQueryTool, ShellExecTool, TestRunnerTool,
+    FileReadTool, FileWriteTool, MemoryQueryTool, ShellExecTool, ShellSandboxProfile,
+    TestRunnerTool,
 };
 pub use executor::{ExecutionRecord, ExecutorConfig, ExecutorError, ToolExecutor};
 pub use registry::{RegistrySnapshot, ToolRegistry};

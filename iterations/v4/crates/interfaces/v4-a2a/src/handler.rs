@@ -74,17 +74,30 @@ impl A2AHandler {
     /// Dispatch a JSON-RPC request and return a response.
     pub async fn handle(&self, request: JsonRpcRequest) -> JsonRpcResponse {
         let id = request.id.clone();
+        let method = request.method.clone();
+        let span = tracing::info_span!(
+            "a2a_request",
+            method = method.as_str(),
+            request_id = ?id,
+        );
+        let _guard = span.enter();
 
         match self.dispatch(request).await {
-            Ok(result) => JsonRpcResponse::success(id, result),
-            Err(err) => JsonRpcResponse::error(
-                id,
-                JsonRpcError {
-                    code: err.error_code(),
-                    message: err.to_string(),
-                    data: None,
-                },
-            ),
+            Ok(result) => {
+                tracing::info!(method = method.as_str(), "A2A request succeeded");
+                JsonRpcResponse::success(id, result)
+            }
+            Err(err) => {
+                tracing::warn!(method = method.as_str(), error = %err, "A2A request failed");
+                JsonRpcResponse::error(
+                    id,
+                    JsonRpcError {
+                        code: err.error_code(),
+                        message: err.to_string(),
+                        data: None,
+                    },
+                )
+            }
         }
     }
 

@@ -364,6 +364,14 @@ impl AgentLoop {
         let mut iterations_used = 0u32;
 
         for iteration in 0..self.max_iterations {
+            let iter_span = tracing::info_span!(
+                "agent_loop_iteration",
+                iteration = iteration,
+                goal = self.goal.as_str(),
+                budget_remaining_usd = self.budget_usd - self.context.cost_spent_usd,
+            );
+            let _iter_guard = iter_span.enter();
+
             // 1. Budget check
             if self.context.cost_spent_usd >= self.budget_usd {
                 return Ok(AgentResult {

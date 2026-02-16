@@ -1,0 +1,43 @@
+;;
+;; standard.sb — Standard sandbox profile for tool execution
+;;
+;; Allows: file read anywhere, file write within ALLOWED_PATH and /tmp,
+;;         network HTTP/HTTPS, process spawning of standard executables.
+;;
+;; Usage: sandbox-exec -f standard.sb -D ALLOWED_PATH=/path/to/workdir /bin/sh -c "command"
+;;
+
+(version 1)
+(deny default)
+
+;; --- File access ---
+;; Allow reads globally (required for dylib loading, system files, etc.)
+(allow file-read*)
+
+;; Write only within the allowed working directory and temp
+(allow file-write*
+    (subpath (param "ALLOWED_PATH"))
+    (subpath "/tmp")
+    (subpath "/private/tmp")
+    (subpath "/var/folders"))
+
+;; --- Process execution ---
+(allow process-exec
+    (subpath "/usr/bin")
+    (subpath "/bin")
+    (subpath "/usr/sbin")
+    (subpath "/sbin"))
+
+(allow process-fork)
+
+;; --- Network ---
+;; Allow outbound HTTP, HTTPS, and DNS
+(allow network-outbound
+    (remote tcp "*:80")
+    (remote tcp "*:443")
+    (remote udp "*:53"))
+
+;; --- System ---
+(allow sysctl-read)
+(allow mach-lookup)
+(allow signal (target self))

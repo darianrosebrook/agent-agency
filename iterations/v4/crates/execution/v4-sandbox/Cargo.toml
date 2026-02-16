@@ -23,6 +23,9 @@ chrono.workspace = true
 # Error handling
 thiserror.workspace = true
 
+# Logging
+tracing.workspace = true
+
 # Cryptography (for content verification)
 sha2.workspace = true
 hex.workspace = true

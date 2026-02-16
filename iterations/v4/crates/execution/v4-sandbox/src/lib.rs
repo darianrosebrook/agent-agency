@@ -48,6 +48,7 @@
 mod environment;
 mod executor;
 mod policy;
+pub mod profiles;
 
 pub use environment::{
     AuditAction, AuditEntry, AuditResult, ResourceUsage, SandboxEnvironment, SandboxError,
@@ -58,6 +59,7 @@ pub use executor::{
     SandboxedExecutorError,
 };
 pub use policy::{PolicyChecker, PolicyResult, SandboxPolicy, SecurityLevel};
+pub use profiles::{SandboxProfile, SandboxProfileError};
 
 #[cfg(test)]
 mod tests {
