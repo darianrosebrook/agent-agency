@@ -22,6 +22,9 @@ chrono.workspace = true
 # Error handling
 thiserror.workspace = true
 
+# Search
+regex.workspace = true
+
 # Cryptography (for content hashing)
 sha2.workspace = true
 hex.workspace = true

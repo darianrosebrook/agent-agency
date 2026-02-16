@@ -38,26 +38,7 @@ impl WorkerState {
     }
 }
 
-/// Worker type
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum WorkerType {
-    /// Standard local worker
-    Local,
-    /// Sandboxed worker with restricted permissions
-    Sandboxed,
-    /// GPU-accelerated worker
-    GpuAccelerated,
-}
-
-impl WorkerType {
-    pub fn description(&self) -> &'static str {
-        match self {
-            Self::Local => "Local execution with standard permissions",
-            Self::Sandboxed => "Sandboxed execution with restricted permissions",
-            Self::GpuAccelerated => "GPU-accelerated execution",
-        }
-    }
-}
+pub use v4_types::WorkerType;
 
 /// Worker statistics
 #[derive(Debug, Default)]
@@ -200,7 +181,7 @@ impl WorkerHandle {
     pub fn info(&self) -> WorkerInfo {
         WorkerInfo {
             id: self.id.clone(),
-            worker_type: self.worker_type,
+            worker_type: self.worker_type.clone(),
             state: self.state(),
             current_task: self.current_task(),
             created_at: self.created_at,

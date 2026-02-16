@@ -31,7 +31,9 @@ pub use execution::{ExecutionArtifacts, ExecutionStatus, TaskResult};
 pub use operators::OperatorType;
 pub use task::{TaskConstraints, TaskRequest, TaskResponse, TaskSpec, TaskStatus};
 pub use verdict::{GateResult, GateStatus, GateType, QualityReport};
-pub use worker::{WorkerAssignment, WorkerResult, WorkerStatus};
+pub use worker::{
+    WorkerAssignment, WorkerCapability, WorkerProfile, WorkerResult, WorkerStatus, WorkerType,
+};
 
 /// API version for compatibility checking
 pub const API_VERSION: &str = "4.0.0";

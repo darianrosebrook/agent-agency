@@ -73,10 +73,12 @@ impl WorkerPool {
             .filter(|w| w.worker_type == worker_type && w.state().is_active())
             .count();
 
-        let max = match worker_type {
+        let max = match &worker_type {
             WorkerType::Local => self.config.max_local_workers,
             WorkerType::Sandboxed => self.config.max_sandboxed_workers,
-            WorkerType::GpuAccelerated => 1, // Limited GPU workers
+            WorkerType::GpuAccelerated => 1,
+            WorkerType::Remote { .. } => self.config.max_local_workers, // Same limit as local
+            WorkerType::ManualReview => 1,
         };
 
         if type_count >= max {
@@ -101,18 +103,18 @@ impl WorkerPool {
     }
 
     /// Get an available worker of the specified type
-    pub fn acquire(&self, worker_type: WorkerType) -> Option<WorkerHandle> {
+    pub fn acquire(&self, worker_type: &WorkerType) -> Option<WorkerHandle> {
         let workers = self.workers.read().unwrap();
 
         workers
             .values()
-            .find(|w| w.worker_type == worker_type && w.is_available())
+            .find(|w| &w.worker_type == worker_type && w.is_available())
             .cloned()
     }
 
     /// Get an available worker of any type, preferring the specified type
-    pub fn acquire_any(&self, preferred: WorkerType) -> Option<WorkerHandle> {
-        // Try preferred type first
+    pub fn acquire_any(&self, preferred: &WorkerType) -> Option<WorkerHandle> {
+        // Try preferred first
         if let Some(worker) = self.acquire(preferred) {
             return Some(worker);
         }
@@ -154,8 +156,10 @@ impl WorkerPool {
     pub fn stats(&self) -> PoolStats {
         let workers = self.workers.read().unwrap();
 
-        let mut stats = PoolStats::default();
-        stats.total_workers = workers.len();
+        let mut stats = PoolStats {
+            total_workers: workers.len(),
+            ..Default::default()
+        };
 
         for worker in workers.values() {
             match worker.state() {
@@ -203,12 +207,12 @@ impl WorkerPool {
     }
 
     /// Get worker count by type
-    pub fn count_by_type(&self, worker_type: WorkerType) -> usize {
+    pub fn count_by_type(&self, worker_type: &WorkerType) -> usize {
         self.workers
             .read()
             .unwrap()
             .values()
-            .filter(|w| w.worker_type == worker_type && w.state().is_active())
+            .filter(|w| &w.worker_type == worker_type && w.state().is_active())
             .count()
     }
 
@@ -289,10 +293,10 @@ mod tests {
         pool.spawn(WorkerType::Local).unwrap();
         pool.spawn(WorkerType::Sandboxed).unwrap();
 
-        let local = pool.acquire(WorkerType::Local);
+        let local = pool.acquire(&WorkerType::Local);
         assert!(local.is_some());
 
-        let sandboxed = pool.acquire(WorkerType::Sandboxed);
+        let sandboxed = pool.acquire(&WorkerType::Sandboxed);
         assert!(sandboxed.is_some());
     }
 
@@ -304,7 +308,7 @@ mod tests {
         worker.start_task("task-1");
 
         // Should not find available worker
-        let acquired = pool.acquire(WorkerType::Local);
+        let acquired = pool.acquire(&WorkerType::Local);
         assert!(acquired.is_none());
     }
 

@@ -69,6 +69,7 @@ pub mod certificate;
 pub mod decision;
 pub mod gates;
 pub mod router;
+pub mod worker_registry;
 
 // Re-export main types
 pub use arbiter::{Arbiter, ArbiterError, ArbiterResult};
@@ -82,6 +83,7 @@ pub use router::{
     AlternativeRoute, FactorInfluence, ResourceRequirements, RoutingDecision, RoutingFactor,
     RoutingReasoning, TaskRouter, WorkerRouting, WorkerType,
 };
+pub use worker_registry::{WorkerEntry, WorkerRegistry, WorkerStatus};
 
 #[cfg(test)]
 mod tests {

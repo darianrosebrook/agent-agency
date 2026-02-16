@@ -59,7 +59,8 @@ pub mod tool;
 
 // Re-export main types
 pub use builtin::{
-    register_builtin_tools, CodeSearchTool, DirectoryListTool, FileReadTool, MemoryQueryTool,
+    register_builtin_tools, CodeSearchTool, DirectoryListTool, FileEditTool, FilePatchTool,
+    FileReadTool, FileWriteTool, MemoryQueryTool, ShellExecTool, TestRunnerTool,
 };
 pub use executor::{ExecutionRecord, ExecutorConfig, ExecutorError, ToolExecutor};
 pub use registry::{RegistrySnapshot, ToolRegistry};
@@ -79,15 +80,15 @@ mod tests {
         let registry = ToolRegistry::new();
         register_builtin_tools(&registry);
 
-        assert_eq!(registry.count(), 4);
+        assert_eq!(registry.count(), 9);
 
         // Find tools by category
         let fs_tools = registry.find_by_category(ToolCategory::FileSystem);
-        assert_eq!(fs_tools.len(), 2); // FileRead and DirList
+        assert_eq!(fs_tools.len(), 5); // FileRead, FileWrite, FileEdit, DirList, FilePatch
 
         // Find tools by capability
         let readonly_tools = registry.find_by_capability(ToolCapability::ReadOnly);
-        assert_eq!(readonly_tools.len(), 4); // All builtin tools are readonly
+        assert_eq!(readonly_tools.len(), 4); // FileRead, DirList, CodeSearch, MemoryQuery
     }
 
     #[tokio::test]
@@ -142,8 +143,12 @@ mod tests {
         let seek_tools = registry.find_for_operator("S");
         assert!(!seek_tools.is_empty());
 
-        // Control operators have no built-in tools
+        // Memorize operators should find write/edit/patch tools
+        let memorize_tools = registry.find_for_operator("M");
+        assert_eq!(memorize_tools.len(), 3); // FileWrite, FileEdit, FilePatch
+
+        // Control operators should find shell-exec and test-runner
         let control_tools = registry.find_for_operator("C");
-        assert!(control_tools.is_empty());
+        assert_eq!(control_tools.len(), 2);
     }
 }

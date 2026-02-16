@@ -44,12 +44,30 @@ mod pool;
 mod task;
 mod worker;
 
+pub mod agent_loop;
+pub mod planner;
+pub mod scope_guard;
+pub mod worktree;
+
 pub use pool::{PoolConfig, PoolError, PoolStats, WorkerPool};
 pub use task::{
     Task, TaskError, TaskExecutor, TaskExecutorConfig, TaskId, TaskPriority, TaskQueue, TaskResult,
     TaskStatus,
 };
 pub use worker::{WorkerHandle, WorkerId, WorkerInfo, WorkerState, WorkerStats, WorkerType};
+
+// Phase 5: Agentic Loop
+pub use agent_loop::{
+    AgentContext, AgentError, AgentLoop, AgentResult, Attempt, TerminationReason,
+};
+pub use planner::{
+    Approval, ApprovalError, ApprovalGate, AutoApprovalGate, LlmPlanner, PlanError, Planner,
+    RulePlanner, StdinApprovalGate,
+};
+pub use scope_guard::{FileLock, LockError, LockMode, LockSet, LockStats, ScopeGuard};
+pub use worktree::{
+    MergeResult, WorktreeConfig, WorktreeError, WorktreeInfo, WorktreeManager, WorktreeStatus,
+};
 
 #[cfg(test)]
 mod tests {
@@ -66,11 +84,11 @@ mod tests {
         let worker2 = pool.spawn(WorkerType::Sandboxed).unwrap();
 
         assert_eq!(pool.count(), 2);
-        assert_eq!(pool.count_by_type(WorkerType::Local), 1);
-        assert_eq!(pool.count_by_type(WorkerType::Sandboxed), 1);
+        assert_eq!(pool.count_by_type(&WorkerType::Local), 1);
+        assert_eq!(pool.count_by_type(&WorkerType::Sandboxed), 1);
 
         // Acquire worker
-        let acquired = pool.acquire(WorkerType::Local);
+        let acquired = pool.acquire(&WorkerType::Local);
         assert!(acquired.is_some());
 
         // List workers

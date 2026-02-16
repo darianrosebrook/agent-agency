@@ -1,25 +1,31 @@
 [package]
-name = "v4-mcp"
+name = "v4-a2a"
 version.workspace = true
 edition = "2021"
 license.workspace = true
-description = "Agent Agency V4 - Model Context Protocol (MCP) server"
+description = "Agent Agency V4 - Agent-to-Agent (A2A) protocol server and client"
 
 [dependencies]
 # Workspace crates
 v4-types = { workspace = true }
 v4-tools = { workspace = true }
+v4-workers = { workspace = true }
 v4-governance = { workspace = true }
+v4-inference = { workspace = true }
 
-# Web framework (for HTTP transport)
+# Web framework (for HTTP transport + SSE)
 axum = { version = "0.7", features = ["macros", "tokio"] }
 tower = { version = "0.5", features = ["timeout", "limit"] }
 tower-http = { version = "0.6", features = ["cors", "trace"] }
+
+# HTTP client (for A2A client + agent discovery)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 # Async
 tokio = { workspace = true }
 async-trait = { workspace = true }
 futures = { workspace = true }
+tokio-stream = { version = "0.1", features = ["sync"] }
 
 # Serialization
 serde = { workspace = true }
@@ -30,9 +36,21 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 thiserror = { workspace = true }
 
+# Cryptography (for content hashing)
+sha2 = { workspace = true }
+hex = { workspace = true }
+
 # Logging
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+
+[[bin]]
+name = "a2a_worker"
+path = "src/bin/a2a_worker.rs"
+
+[[bin]]
+name = "a2a_orchestrator"
+path = "src/bin/a2a_orchestrator.rs"
 
 [dev-dependencies]
 tokio-test = { workspace = true }

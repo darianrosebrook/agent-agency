@@ -19,31 +19,101 @@ pub struct WorkerAssignment {
     pub assigned_at: chrono::DateTime<chrono::Utc>,
 }
 
-/// Types of workers
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+/// Types of workers — execution environment classification
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerType {
-    /// General purpose worker
-    General,
-    /// Code editing specialist
-    CodeEditor,
-    /// Test runner specialist
-    TestRunner,
-    /// Research/analysis specialist
-    Research,
-    /// File operations specialist
-    FileOps,
+    /// Local execution with standard permissions
+    Local,
+    /// Isolated sandbox with restricted permissions
+    Sandboxed,
+    /// Remote A2A worker at a URL
+    Remote { url: String },
+    /// GPU-accelerated execution
+    GpuAccelerated,
+    /// Requires human review before execution
+    ManualReview,
 }
 
 impl WorkerType {
-    /// Get capabilities for this worker type
-    pub fn capabilities(&self) -> Vec<&'static str> {
+    /// Get a human-readable description of this worker type
+    pub fn description(&self) -> &'static str {
         match self {
-            Self::General => vec!["read", "write", "execute", "search"],
-            Self::CodeEditor => vec!["read", "write", "diff", "refactor"],
-            Self::TestRunner => vec!["read", "execute", "test", "coverage"],
-            Self::Research => vec!["read", "search", "web", "analyze"],
-            Self::FileOps => vec!["read", "write", "delete", "rename"],
+            Self::Local => "Local execution with standard permissions",
+            Self::Sandboxed => "Isolated sandbox with restricted permissions",
+            Self::Remote { .. } => "Remote A2A worker",
+            Self::GpuAccelerated => "GPU-accelerated execution",
+            Self::ManualReview => "Requires human review before execution",
         }
+    }
+
+    /// Check if this is a remote worker
+    pub fn is_remote(&self) -> bool {
+        matches!(self, Self::Remote { .. })
+    }
+}
+
+/// Worker capability — specialist classification
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub enum WorkerCapability {
+    /// General purpose
+    General,
+    /// Code editing and refactoring
+    CodeEditing,
+    /// Test running and coverage
+    TestRunning,
+    /// Research and analysis
+    Research,
+    /// File system operations
+    FileOperations,
+    /// Content generation (via LLM)
+    ContentGeneration,
+}
+
+impl WorkerCapability {
+    /// Get string identifier for this capability
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::General => "general",
+            Self::CodeEditing => "code-editing",
+            Self::TestRunning => "test-running",
+            Self::Research => "research",
+            Self::FileOperations => "file-operations",
+            Self::ContentGeneration => "content-generation",
+        }
+    }
+}
+
+/// Worker profile combining type and capabilities
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct WorkerProfile {
+    /// Execution environment type
+    pub worker_type: WorkerType,
+    /// Specialist capabilities
+    pub capabilities: Vec<WorkerCapability>,
+    /// Optional description
+    pub description: Option<String>,
+}
+
+impl WorkerProfile {
+    /// Create a new worker profile
+    pub fn new(worker_type: WorkerType) -> Self {
+        Self {
+            worker_type,
+            capabilities: Vec::new(),
+            description: None,
+        }
+    }
+
+    /// Add a capability
+    pub fn with_capability(mut self, cap: WorkerCapability) -> Self {
+        self.capabilities.push(cap);
+        self
+    }
+
+    /// Set description
+    pub fn with_description(mut self, desc: impl Into<String>) -> Self {
+        self.description = Some(desc.into());
+        self
     }
 }
 
@@ -165,14 +235,39 @@ mod tests {
     use chrono::{Duration, Utc};
 
     #[test]
-    fn test_worker_type_capabilities() {
-        let general = WorkerType::General;
-        assert!(general.capabilities().contains(&"read"));
-        assert!(general.capabilities().contains(&"write"));
+    fn test_worker_type_descriptions() {
+        assert!(!WorkerType::Local.description().is_empty());
+        assert!(!WorkerType::Sandboxed.description().is_empty());
+        assert!(!WorkerType::Remote { url: "http://localhost".to_string() }.description().is_empty());
+        assert!(!WorkerType::GpuAccelerated.description().is_empty());
+        assert!(!WorkerType::ManualReview.description().is_empty());
+    }
 
-        let test_runner = WorkerType::TestRunner;
-        assert!(test_runner.capabilities().contains(&"test"));
-        assert!(test_runner.capabilities().contains(&"coverage"));
+    #[test]
+    fn test_worker_type_is_remote() {
+        assert!(!WorkerType::Local.is_remote());
+        assert!(!WorkerType::Sandboxed.is_remote());
+        assert!(WorkerType::Remote { url: "http://localhost:3010".to_string() }.is_remote());
+        assert!(!WorkerType::GpuAccelerated.is_remote());
+        assert!(!WorkerType::ManualReview.is_remote());
+    }
+
+    #[test]
+    fn test_worker_capability() {
+        assert_eq!(WorkerCapability::General.as_str(), "general");
+        assert_eq!(WorkerCapability::ContentGeneration.as_str(), "content-generation");
+    }
+
+    #[test]
+    fn test_worker_profile() {
+        let profile = WorkerProfile::new(WorkerType::Remote { url: "http://localhost:3010".to_string() })
+            .with_capability(WorkerCapability::ContentGeneration)
+            .with_capability(WorkerCapability::Research)
+            .with_description("MiniMax M2.5 worker");
+
+        assert!(profile.worker_type.is_remote());
+        assert_eq!(profile.capabilities.len(), 2);
+        assert!(profile.description.is_some());
     }
 
     #[test]

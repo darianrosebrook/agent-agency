@@ -30,6 +30,12 @@ tracing = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 
+# MLX inference (optional, Apple Silicon only)
+mlx-rs = { version = "0.25", features = ["metal", "accelerate"], optional = true }
+tokenizers = { version = "0.22", optional = true }
+hf-hub = { version = "0.4", optional = true }
+safetensors = { version = "0.4", optional = true }
+
 [dev-dependencies]
 tokio-test = { workspace = true }
 
@@ -38,4 +44,4 @@ default = []
 # CoreML support (macOS only, legacy)
 coreml = []
 # MLX support (Apple Silicon, recommended)
-mlx = []
+mlx = ["dep:mlx-rs", "dep:tokenizers", "dep:hf-hub", "dep:safetensors"]

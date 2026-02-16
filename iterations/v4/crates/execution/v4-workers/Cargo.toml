@@ -8,13 +8,14 @@ description = "Agent Agency V4 - Worker pool and task execution"
 [dependencies]
 v4-types.workspace = true
 v4-tools = { path = "../v4-tools" }
+v4-governance = { path = "../../core/v4-governance" }
 
 # Serialization
 serde.workspace = true
 serde_json.workspace = true
 
 # Async
-tokio = { workspace = true, features = ["sync", "time", "rt"] }
+tokio = { workspace = true, features = ["sync", "time", "rt", "process", "fs"] }
 async-trait.workspace = true
 
 # Time
@@ -30,5 +31,9 @@ hex.workspace = true
 # Unique identifiers
 uuid.workspace = true
 
+# Logging
+tracing.workspace = true
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tempfile = "3"

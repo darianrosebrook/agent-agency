@@ -77,11 +77,14 @@ pub mod types;
 #[cfg(feature = "mlx")]
 pub mod mlx;
 
+#[cfg(feature = "mlx")]
+pub(crate) mod mlx_model;
+
 // Re-exports for convenience
 pub use config::{InferenceConfig, ModelConfig, ProviderType};
 pub use error::InferenceError;
 pub use mock::MockProvider;
-pub use provider::{InferenceProvider, ProviderFactory};
+pub use provider::{InferenceProvider, ModelSource, ProviderFactory};
 pub use service::{InferenceMetrics, InferenceService};
 pub use types::{
     FinishReason, InferenceRequest, InferenceResponse, ModelInfo, ProviderStatus, TokenEvent,

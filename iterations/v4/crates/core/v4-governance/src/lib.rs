@@ -14,7 +14,14 @@
 pub mod gates;
 pub mod modes;
 pub mod policy;
+pub mod waivers;
+pub mod working_spec;
 
 pub use gates::{CAWSEvaluator, GateEvaluation, GateVerdict};
 pub use modes::{GovernanceMode, ModeTransition};
 pub use policy::{ActionRequest, Policy, PolicyDecision, PolicyViolation};
+pub use waivers::{Waiver, WaiverError, WaiverGate, WaiverSet, WaiverStatus};
+pub use working_spec::{
+    AcceptanceCriterion, BlastRadius, BudgetChecker, BudgetViolation, ChangeBudget,
+    CriterionStatus, RiskTier, ScopeEnforcer, SpecMode, WorkingSpec,
+};

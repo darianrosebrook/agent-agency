@@ -28,6 +28,7 @@ members = [
     # Interface layer (top of dependency tree)
     "crates/interfaces/v4-api",
     "crates/interfaces/v4-mcp",
+    "crates/interfaces/v4-a2a",
 
     # Integration tests
     "tests",
@@ -44,6 +45,7 @@ repository = "https://github.com/anthropics/agent-agency"
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"
 
 # Async runtime
 tokio = { version = "1.0", features = ["full"] }
@@ -61,6 +63,8 @@ anyhow = "1.0"
 
 # Validation
 schemars = "0.8"
+globset = "0.4"
+regex = "1.10"
 
 # Cryptography (for fingerprinting)
 sha2 = "0.10"
@@ -92,6 +96,7 @@ v4-inference = { path = "crates/infrastructure/v4-inference" }
 v4-observability = { path = "crates/infrastructure/v4-observability" }
 v4-api = { path = "crates/interfaces/v4-api" }
 v4-mcp = { path = "crates/interfaces/v4-mcp" }
+v4-a2a = { path = "crates/interfaces/v4-a2a" }
 
 [workspace.lints.rust]
 # Strict mode - no warnings allowed

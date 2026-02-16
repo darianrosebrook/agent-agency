@@ -308,17 +308,17 @@ impl TaskExecutor {
     /// Acquire a worker, spawning if necessary
     async fn acquire_worker(&self, worker_type: WorkerType) -> Result<WorkerHandle, TaskError> {
         // Try to get existing worker
-        if let Some(worker) = self.pool.acquire(worker_type) {
+        if let Some(worker) = self.pool.acquire(&worker_type) {
             return Ok(worker);
         }
 
         // Try to spawn new worker if configured
         if self.config.auto_spawn_workers {
-            match self.pool.spawn(worker_type) {
+            match self.pool.spawn(worker_type.clone()) {
                 Ok(worker) => return Ok(worker),
                 Err(_) => {
                     // Pool at capacity, try any available worker
-                    if let Some(worker) = self.pool.acquire_any(worker_type) {
+                    if let Some(worker) = self.pool.acquire_any(&worker_type) {
                         return Ok(worker);
                     }
                 }

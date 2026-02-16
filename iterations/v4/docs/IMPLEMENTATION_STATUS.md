@@ -298,6 +298,22 @@ let verdict = council.full_review(&evidence).await?;
 
 ## What's NOT Built Yet
 
+### Sterling Integration (High Priority)
+
+The current symbolic reasoning uses **keyword matching** instead of **semantic parsing**. See [STERLING_INTEGRATION.md](./STERLING_INTEGRATION.md) for the detailed design.
+
+| Component | Purpose | Priority | Status |
+|-----------|---------|----------|--------|
+| Semantic Parser | Parse task intent (READ/WRITE/DELETE/etc.) | **High** | Design complete |
+| Evidence Builder | Wire parsed intent to JudgeEvidence | **High** | Design complete |
+| StateGraph Search | Multi-path reasoning (Sterling-style) | **High** | Design complete |
+| Value Function | Learned heuristic for search guidance | Medium | Design complete |
+
+**Key Gap**: "Delete all files from /tmp" currently gets approved (0.84 score) because:
+1. Task description doesn't flow to JudgeEvidence
+2. Risk tier stays at default (1) instead of elevating to 4
+3. Ethics patterns in ConstitutionalJudge never see the actual text
+
 ### Remaining Interface Work
 
 | Component | Purpose | Priority |
@@ -379,9 +395,10 @@ Key entry points:
 
 ### 6. Next Steps (Recommended)
 
-1. **Integrate real mlx-rs bindings** - Wire up actual model loading (currently mock generation)
-2. **Connect to dashboard** - Wire up the Next.js management UI
-3. **Add v4-cli** - Command-line interface for task submission
+1. **Sterling Integration** - Implement semantic parsing and evidence population (see [STERLING_INTEGRATION.md](./STERLING_INTEGRATION.md))
+2. **Integrate real mlx-rs bindings** - Wire up actual model loading (currently mock generation)
+3. **Connect to dashboard** - Wire up the Next.js management UI
+4. **Add v4-cli** - Command-line interface for task submission
 
 ---
 
@@ -426,6 +443,7 @@ tests/                                      2 files
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.6.0 | 2026-01-25 | Added Sterling integration design, identified semantic parsing gap |
 | 1.5.0 | 2026-01-25 | Added v4-mcp with MCP protocol support for tool exposure |
 | 1.4.0 | 2026-01-25 | Added MLX provider for Apple Silicon (recommended over CoreML) |
 | 1.3.0 | 2026-01-25 | Added v4-inference with mock provider, wired to API probe endpoint |

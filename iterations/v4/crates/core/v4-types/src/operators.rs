@@ -86,6 +86,12 @@ pub enum MemorizeOp {
     CreateCheckpoint { label: String },
     /// Store execution result
     StoreResult { task_id: String, result_hash: String },
+    /// Write content to a file
+    WriteFile { path: String, content: String },
+    /// Edit a file by replacing old text with new text
+    EditFile { path: String, old_text: String, new_text: String, replace_all: bool },
+    /// Apply a unified diff patch to a file
+    PatchFile { path: String, diff: String },
 }
 
 /// Perceive operations - Interpret input
@@ -125,6 +131,10 @@ pub enum ControlOp {
     Delegate { agent_id: String, task: String },
     /// Wait for external event
     Wait { event: String, timeout_ms: u64 },
+    /// Execute a shell command
+    RunCommand { command: String, working_dir: Option<String>, timeout_ms: Option<u64> },
+    /// Run tests via cargo test
+    RunTests { crate_name: Option<String>, test_filter: Option<String>, timeout_ms: Option<u64> },
     /// Terminate execution
     Terminate { reason: String },
 }

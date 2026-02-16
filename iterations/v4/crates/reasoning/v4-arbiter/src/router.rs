@@ -5,6 +5,11 @@
 
 use serde::{Deserialize, Serialize};
 use v4_types::task::{Environment, TaskPriority, TaskRequest};
+use v4_types::operators::ControlOp;
+use v4_types::OperatorType;
+pub use v4_types::WorkerType;
+
+use crate::worker_registry::WorkerRegistry;
 
 /// Routing decision with full reasoning
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,34 +38,6 @@ impl RoutingDecision {
             "Route task {} to {:?} worker. Reason: {}",
             self.task_id, self.worker_type, self.reasoning.primary_reason
         )
-    }
-}
-
-/// Types of workers tasks can be routed to
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum WorkerType {
-    /// Local execution worker
-    Local,
-    /// Sandboxed execution worker
-    Sandboxed,
-    /// Remote execution worker
-    Remote,
-    /// GPU-accelerated worker
-    GpuAccelerated,
-    /// Manual review (human in the loop)
-    ManualReview,
-}
-
-impl WorkerType {
-    /// Get a description of this worker type
-    pub fn description(&self) -> &'static str {
-        match self {
-            Self::Local => "Local execution with standard permissions",
-            Self::Sandboxed => "Isolated sandbox with restricted permissions",
-            Self::Remote => "Remote execution on cluster",
-            Self::GpuAccelerated => "GPU-accelerated execution",
-            Self::ManualReview => "Requires human review before execution",
-        }
     }
 }
 
@@ -171,6 +148,8 @@ pub struct TaskRouter {
     sandbox_threshold: u8,
     /// Risk tier threshold for manual review
     review_threshold: u8,
+    /// Optional worker registry for hybrid routing
+    worker_registry: Option<WorkerRegistry>,
 }
 
 impl TaskRouter {
@@ -180,7 +159,14 @@ impl TaskRouter {
             default_worker: WorkerType::Local,
             sandbox_threshold: 3,
             review_threshold: 5,
+            worker_registry: None,
         }
+    }
+
+    /// Set the worker registry for hybrid routing
+    pub fn with_registry(mut self, registry: WorkerRegistry) -> Self {
+        self.worker_registry = Some(registry);
+        self
     }
 
     /// Set the sandbox threshold
@@ -259,7 +245,7 @@ impl TaskRouter {
         {
             WorkerType::Sandboxed
         } else {
-            self.default_worker
+            self.default_worker.clone()
         };
 
         // Consider alternatives
@@ -296,7 +282,7 @@ impl TaskRouter {
                 }
             }
             WorkerType::Local => "Standard execution appropriate for task risk level".to_string(),
-            WorkerType::Remote => "Task requires remote execution".to_string(),
+            WorkerType::Remote { .. } => "Task requires remote execution".to_string(),
             WorkerType::GpuAccelerated => "Task requires GPU acceleration".to_string(),
         };
 
@@ -324,6 +310,111 @@ impl TaskRouter {
             factors,
             decided_at: chrono::Utc::now(),
         }
+    }
+
+    /// Route a task considering both local tools and remote A2A workers.
+    ///
+    /// Examines the operators to decide:
+    /// - **Local**: file reads/writes/edits, shell commands, directory listing
+    /// - **Remote**: explicit delegation, bulk content generation, knowledge queries
+    /// - **Scoring**: when both local and remote are viable, scores determine the winner
+    pub fn route_hybrid(
+        &self,
+        task: &TaskRequest,
+        risk_tier: u8,
+        operators: &[OperatorType],
+    ) -> RoutingDecision {
+        let mut local_score: f64 = 0.0;
+        let mut remote_score: f64 = 0.0;
+        let mut target_worker_id: Option<String> = None;
+
+        for op in operators {
+            match op {
+                OperatorType::Seek(_) => local_score += 1.0,
+                OperatorType::Memorize(_) => local_score += 1.0,
+                OperatorType::Perceive(_) => local_score += 0.5,
+                OperatorType::Knowledge(_) => remote_score += 1.0,
+                OperatorType::Control(ctrl) => match ctrl {
+                    ControlOp::RunCommand { .. } => local_score += 1.0,
+                    ControlOp::Terminate { .. } => local_score += 0.5,
+                    ControlOp::Delegate { agent_id, .. } => {
+                        remote_score += 2.0;
+                        target_worker_id = Some(agent_id.clone());
+                    }
+                    _ => local_score += 0.5,
+                },
+            }
+        }
+
+        // If registry has available workers for content generation, boost remote
+        if let Some(ref registry) = self.worker_registry {
+            let available = registry.find_available();
+            if !available.is_empty() && remote_score > 0.0 {
+                remote_score += 0.5;
+            }
+            // If a specific worker was targeted, verify it exists
+            if let Some(ref wid) = target_worker_id {
+                if registry.get(wid).is_none() {
+                    // Target worker not in registry — fall back to local
+                    remote_score = 0.0;
+                    target_worker_id = None;
+                }
+            }
+        }
+
+        // Start with the risk-based decision
+        let mut decision = self.route(task, risk_tier);
+
+        // Determine execution target
+        let execution_target = if remote_score > local_score {
+            "remote"
+        } else {
+            "local"
+        };
+
+        // Add execution target factor
+        decision.factors.push(RoutingFactor {
+            name: "execution_target".to_string(),
+            value: execution_target.to_string(),
+            weight: 0.3,
+            influence: if execution_target == "remote" {
+                FactorInfluence::Favored
+            } else {
+                FactorInfluence::Neutral
+            },
+        });
+
+        // Add scoring factor
+        decision.factors.push(RoutingFactor {
+            name: "hybrid_scores".to_string(),
+            value: format!("local={:.1} remote={:.1}", local_score, remote_score),
+            weight: 0.2,
+            influence: FactorInfluence::Neutral,
+        });
+
+        // If remote is preferred and we have a specific worker, set worker_id
+        if execution_target == "remote" {
+            if let Some(wid) = target_worker_id {
+                decision.worker_id = Some(wid);
+            }
+            // Override worker type to Remote if we're delegating
+            if decision.worker_type == WorkerType::Local {
+                decision.worker_type = WorkerType::Remote {
+                    url: String::new(), // URL resolved by caller from registry
+                };
+                decision.reasoning.primary_reason =
+                    "Operators prefer remote execution for content generation/delegation"
+                        .to_string();
+            }
+        }
+
+        // Update reasoning with hybrid context
+        decision
+            .reasoning
+            .secondary_reasons
+            .push(format!("Hybrid routing: {}", execution_target));
+
+        decision
     }
 
     /// Create full routing information
@@ -455,5 +546,113 @@ mod tests {
 
         assert!(!routing.retry_on_failure);
         assert_eq!(routing.max_retries, 0);
+    }
+
+    // --- Hybrid routing tests ---
+
+    use v4_types::operators::{ControlOp, KnowledgeOp, MemorizeOp, SeekOp};
+    use v4_types::WorkerCapability;
+    use crate::worker_registry::{WorkerEntry, WorkerRegistry, WorkerStatus};
+
+    #[test]
+    fn test_hybrid_file_read_routes_local() {
+        let router = TaskRouter::new();
+        let task = make_task(TaskPriority::Normal, Environment::Development);
+        let ops = vec![OperatorType::Seek(SeekOp::ReadFile {
+            path: "src/main.rs".to_string(),
+        })];
+
+        let decision = router.route_hybrid(&task, 1, &ops);
+
+        let target = decision.factors.iter().find(|f| f.name == "execution_target").unwrap();
+        assert_eq!(target.value, "local");
+        assert_eq!(decision.worker_type, WorkerType::Local);
+    }
+
+    #[test]
+    fn test_hybrid_delegate_routes_remote() {
+        let registry = WorkerRegistry::new();
+        registry.register(WorkerEntry {
+            worker_id: "minimax".to_string(),
+            url: "http://localhost:3010".to_string(),
+            worker_type: WorkerType::Remote { url: "http://localhost:3010".to_string() },
+            capabilities: vec![WorkerCapability::ContentGeneration],
+            skills: vec!["draft-content".to_string()],
+            status: WorkerStatus::Available,
+            registered_at: chrono::Utc::now(),
+            last_heartbeat: None,
+        });
+
+        let router = TaskRouter::new().with_registry(registry);
+        let task = make_task(TaskPriority::Normal, Environment::Development);
+        let ops = vec![OperatorType::Control(ControlOp::Delegate {
+            agent_id: "minimax".to_string(),
+            task: "Write a haiku".to_string(),
+        })];
+
+        let decision = router.route_hybrid(&task, 1, &ops);
+
+        let target = decision.factors.iter().find(|f| f.name == "execution_target").unwrap();
+        assert_eq!(target.value, "remote");
+        assert_eq!(decision.worker_id, Some("minimax".to_string()));
+    }
+
+    #[test]
+    fn test_hybrid_mixed_operators_scores() {
+        let router = TaskRouter::new();
+        let task = make_task(TaskPriority::Normal, Environment::Development);
+
+        // 2 local ops vs 1 remote — local should win
+        let ops = vec![
+            OperatorType::Seek(SeekOp::ReadFile { path: "a.rs".to_string() }),
+            OperatorType::Memorize(MemorizeOp::WriteFile {
+                path: "b.rs".to_string(),
+                content: "content".to_string(),
+            }),
+            OperatorType::Knowledge(KnowledgeOp::ApplyCodePattern { pattern_id: "topic".to_string() }),
+        ];
+
+        let decision = router.route_hybrid(&task, 1, &ops);
+
+        let target = decision.factors.iter().find(|f| f.name == "execution_target").unwrap();
+        assert_eq!(target.value, "local");
+
+        // Check scores are recorded
+        let scores = decision.factors.iter().find(|f| f.name == "hybrid_scores").unwrap();
+        assert!(scores.value.contains("local=2.0"));
+        assert!(scores.value.contains("remote=1.0"));
+    }
+
+    #[test]
+    fn test_hybrid_content_generation_routes_remote() {
+        let router = TaskRouter::new();
+        let task = make_task(TaskPriority::Normal, Environment::Development);
+
+        // Only knowledge ops — should prefer remote
+        let ops = vec![
+            OperatorType::Knowledge(KnowledgeOp::ApplyCodePattern { pattern_id: "topic".to_string() }),
+            OperatorType::Knowledge(KnowledgeOp::LookupApiConvention { api: "detail".to_string() }),
+        ];
+
+        let decision = router.route_hybrid(&task, 1, &ops);
+
+        let target = decision.factors.iter().find(|f| f.name == "execution_target").unwrap();
+        assert_eq!(target.value, "remote");
+    }
+
+    #[test]
+    fn test_hybrid_has_reasoning() {
+        let router = TaskRouter::new();
+        let task = make_task(TaskPriority::Normal, Environment::Development);
+        let ops = vec![OperatorType::Seek(SeekOp::ReadFile {
+            path: "test.rs".to_string(),
+        })];
+
+        let decision = router.route_hybrid(&task, 1, &ops);
+
+        // Must have hybrid routing context in secondary reasons
+        assert!(decision.reasoning.secondary_reasons.iter().any(|r| r.contains("Hybrid")));
+        // Must have execution_target factor
+        assert!(decision.factors.iter().any(|f| f.name == "execution_target"));
     }
 }
